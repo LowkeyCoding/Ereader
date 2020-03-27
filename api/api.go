@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"./file"
+	"../file"
 	"github.com/go-http-utils/etag"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"

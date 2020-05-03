@@ -30,10 +30,10 @@ type File struct {
 type Files []File
 
 /*
-	converts bytes to kb/mb/gb/tb/pb/eb
-	the last two are a bit overkill but future proofing? xD
+FileSizeToSI converts bytes to kb/mb/gb/tb/pb/eb
+the last two are a bit overkill but future proofing? xD
 */
-func (file *File) fileSizeToSI() {
+func (file *File) FileSizeToSI() {
 	const unit = 1000
 	if file.Size < unit {
 		file.SizeSI = fmt.Sprintf("%d B", file.Size)
@@ -48,8 +48,8 @@ func (file *File) fileSizeToSI() {
 		float64(file.Size)/float64(div), "kMGTPE"[exp])
 }
 
-// creates sha256 has of the file.
-func (file *File) createFileHash() (string, error) {
+// CreateFileHash creates a sha256 hash of the given file.
+func (file *File) CreateFileHash() (string, error) {
 	hasher := sha256.New()
 	bytes, err := ioutil.ReadFile(file.Path)
 	hasher.Write(bytes)
@@ -59,18 +59,21 @@ func (file *File) createFileHash() (string, error) {
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
-// creates a string representation of the file structure.
-func (file *File) toString() string {
+// ToString creates a string representation of the file structure.
+func (file *File) ToString() string {
 	return "Name: " + file.Name +
 		"\nSize: " + string(file.Size) +
 		"\nPath: " + file.Path +
 		"\nExtension: " + file.Extension +
 		"\nIsDir: " + strconv.FormatBool(file.IsDir) +
-		"\n ApplicaitionData: " + file.ApplicaitionData +
-		"\n Hash: " + file.Hash
+		"\nIsPdf: " + strconv.FormatBool(file.IsDir) +
+		"\nFileCount: " + strconv.Itoa(file.FileCount) +
+		"\nApplicaitionData: " + file.ApplicaitionData +
+		"\nHash: " + file.Hash
 }
 
-func (file *File) cleanPath(volumePath string) string {
+// CleanPath Cleans the path by removing redundant slashes
+func (file *File) CleanPath(volumePath string) string {
 	// Clean the path up
 	Path := ""
 	Path = strings.ReplaceAll(file.Path, "//", "/")
@@ -92,7 +95,7 @@ type Volumes []Volume
 // WalkFolder takes in a path to a folder and returns a list of all the files inside the folder.
 func (volume *Volume) WalkFolder(path string) (Files, error) {
 	var files Files
-	path = volume.cleanPath(path) + "/"
+	path = volume.CleanPath(path) + "/"
 	filesInfo, err := ioutil.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -111,13 +114,13 @@ func (volume *Volume) WalkFolder(path string) (Files, error) {
 			}
 			Name := strings.Split(info.Name(), Extension)[0]
 			file = File{Name: Name, Path: Path, Size: Size, IsDir: IsDir, Extension: Extension, IsPdf: isPdf}
-			file.fileSizeToSI()
-			Hash, err := file.createFileHash()
+			file.FileSizeToSI()
+			Hash, err := file.CreateFileHash()
 			if err != nil {
 				return nil, err
 			}
 			file.Hash = Hash
-			file.Path = file.cleanPath(volume.Path)
+			file.Path = file.CleanPath(volume.Path)
 		} else {
 			Name := info.Name()
 			fcount, err := ioutil.ReadDir(Path)
@@ -130,20 +133,15 @@ func (volume *Volume) WalkFolder(path string) (Files, error) {
 				return nil, err
 			}
 			file.Hash = Hash
-			file.Path = file.cleanPath(volume.Path)
+			file.Path = file.CleanPath(volume.Path)
 		}
 		files = append(files, file)
 	}
 	return files, nil
 }
 
-// getFile gets a file form the given path.
-func (volume *Volume) getFile(path string) ([]byte, error) {
-	return nil, nil
-}
-
-// cleanPath cleans the path so the user cannot escape outside the specifiede volume
-func (volume *Volume) cleanPath(path string) string {
+// CleanPath cleans the path so the user cannot escape outside the specifiede volume
+func (volume *Volume) CleanPath(path string) string {
 	path = strings.Replace(path, "../", "", -1)
 	return strings.Replace(path, "..", "", -1)
 }

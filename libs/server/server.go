@@ -51,13 +51,13 @@ func (server *Server) Signup(c *fiber.Ctx) {
 		c.SendStatus(fiber.StatusBadRequest)
 		return
 	}
-	userExists := server.getUserByUsername(user.Username)
+	userExists := server.GetUserByUsername(user.Username)
 	if userExists.Username == user.Username {
 		c.SendStatus(fiber.StatusForbidden)
 		return
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
-	err = server.insertUser(user.Username, string(hashedPassword), user.ProfilePicture)
+	err = server.InsertUser(user.Username, string(hashedPassword), user.ProfilePicture)
 	if err != nil {
 		c.SendStatus(fiber.StatusInternalServerError)
 		fmt.Println(err.Error())
@@ -69,7 +69,7 @@ func (server *Server) Signup(c *fiber.Ctx) {
 // Signin is used to assign the user their token given they provided the correct credentials.
 func (server *Server) Signin(c *fiber.Ctx) {
 	user := &User{Username: c.FormValue("username"), Password: c.FormValue("password"), ProfilePicture: c.FormValue("profilepicture")}
-	storedUser := server.getUserByUsername(user.Username)
+	storedUser := server.GetUserByUsername(user.Username)
 	if storedUser.ID == sql.ErrNoRows.Error() {
 		c.SendStatus(http.StatusUnauthorized)
 		return
@@ -141,13 +141,13 @@ func (server *Server) Home(c *fiber.Ctx) {
 // Pdf-viewer servers the page that renders the pdf.
 func (server *Server) PdfViewer(c *fiber.Ctx) {
 	Hash := c.Query("hash")
-	pdf := server.getPdfByHash(Hash)
+	pdf := server.GetPdfByHash(Hash)
 	temp := PDF{}
 	if pdf.ID == temp.ID {
 		pdf.Hash = Hash
 		pdf.Path = c.Query("path")
 		pdf.Page = 1
-		err := server.insertPdf(pdf.Hash, pdf.Path, pdf.Page)
+		err := server.InsertPdf(pdf.Hash, pdf.Path, pdf.Page)
 		if err != nil {
 			fmt.Println(err.Error())
 			c.SendStatus(fiber.StatusBadRequest)
@@ -168,7 +168,7 @@ func (server *Server) PdfUpdate(c *fiber.Ctx) {
 	}
 	Hash := c.Query("hash")
 	Path := c.Query("path")
-	err = server.updatePdfPageCount(Hash, Path, Page)
+	err = server.UpdatePdfPageCount(Hash, Path, Page)
 	if err != nil {
 		c.SendStatus(fiber.StatusBadRequest)
 	}
@@ -241,8 +241,8 @@ func (server *Server) InitDB() {
 	statement.Exec()
 }
 
-// insertUser
-func (server *Server) insertUser(username string, password string, profilepicture string) error {
+// InsertUser inserts a user into the database.
+func (server *Server) InsertUser(username string, password string, profilepicture string) error {
 	statement, _ := server.DB.Prepare(`
 		INSERT INTO users (Username, Password, ProfilePicture) values (?,?,?)
 	`)
@@ -253,16 +253,16 @@ func (server *Server) insertUser(username string, password string, profilepictur
 	return nil
 }
 
-// getUserByUsername
-func (server *Server) getUserByUsername(username string) User {
+// GetUserByUsername gets the user by their username and returns the user as a User object.
+func (server *Server) GetUserByUsername(username string) User {
 	result := server.DB.QueryRow("select * from users where Username=$1", username)
 	user := User{}
 	result.Scan(&user.ID, &user.Username, &user.Password, &user.ProfilePicture)
 	return user
 }
 
-// insertPdf
-func (server *Server) insertPdf(hash string, path string, page int) error {
+// InsertPdf inserts a pdf into the database
+func (server *Server) InsertPdf(hash string, path string, page int) error {
 	statement, _ := server.DB.Prepare(`
 		INSERT INTO pdfs (Hash, Path, Page) values (?,?,?)
 	`)
@@ -273,8 +273,8 @@ func (server *Server) insertPdf(hash string, path string, page int) error {
 	return nil
 }
 
-// updatePdfPageCount
-func (server *Server) updatePdfPageCount(hash string, path string, page int) error {
+// UpdatePdfPageCount updates the current page count of a given pdf.
+func (server *Server) UpdatePdfPageCount(hash string, path string, page int) error {
 	statement, _ := server.DB.Prepare(`
 		UPDATE pdfs SET Page=$1 WHERE Hash=$2
 	`)
@@ -288,7 +288,7 @@ func (server *Server) updatePdfPageCount(hash string, path string, page int) err
 		return err
 	}
 	if affected == 0 {
-		err := server.insertPdf(hash, path, page)
+		err := server.InsertPdf(hash, path, page)
 		if err != nil {
 			return err
 		}
@@ -296,8 +296,8 @@ func (server *Server) updatePdfPageCount(hash string, path string, page int) err
 	return nil
 }
 
-// getPdfByHash
-func (server *Server) getPdfByHash(hash string) PDF {
+// GetPdfByHash gets the pdf from it's hash and returns it as a PDF object.
+func (server *Server) GetPdfByHash(hash string) PDF {
 	result := server.DB.QueryRow("select * from pdfs where Hash=$1", hash)
 	pdf := PDF{}
 	result.Scan(&pdf.ID, &pdf.Hash, &pdf.Path, &pdf.Page)

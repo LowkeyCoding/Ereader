@@ -55,6 +55,8 @@ const nextPage = async() => {
         left: 0,
         behavior: 'auto'
     });
+    // Update the location in the database
+    updatePdfProgress(pdf.documentID, pdf.pageNumber)
 }
 
 const previousPage = async() => {
@@ -67,6 +69,8 @@ const previousPage = async() => {
         left: 0,
         behavior: 'auto'
     });
+    // Update the location in the database
+    updatePdfProgress(pdf.documentID, pdf.pageNumber)
 }
 
 const replacePages = async() => {
@@ -86,6 +90,8 @@ const replacePages = async() => {
 const gotoPage = async(pageNumber) => {
     pdf.pageNumber = pageNumber; // Change page number
     await replacePages(); // Rerender pages
+    // Update the location in the database
+    updatePdfProgress(pdf.documentID, pdf.pageNumber)
 }
 
 const gotoOutlineItem = async(dest) => {
@@ -144,20 +150,14 @@ const init = async(url, element) => {
         .promise.then(async(_pdf) => {
             pdf.scale = 0.99;
             pdf.document = _pdf;
-            pdf.documentID = pdf.document.fingerprint;
-            pdf.pageNumber = config.page
+            pdf.documentID = cfg.hash;
+            pdf.pageNumber = cfg.page
             await renderPages();
             pdf.pages = pdf.container.childNodes;
             outlineContainer = document.getElementById("outline");
             outline = await pdf.document.getOutline();
             await generateOutline(outlineContainer, outline);
-        }).then(
-            window.scrollTo({
-                top: config.cords.y,
-                left: config.cords.x,
-                behavior: 'auto'
-            })
-        ).catch(err => { console.error(err) });
+        }).catch(err => { console.error(err) });
 }
 
 const getProgress = async() => {
@@ -175,4 +175,15 @@ const getProgress = async() => {
         }
     }
     return { documentID: pdf.document._pdfInfo.fingerprint, currentPage, currentPageProgress }
+}
+
+const updatePdfProgress = (hash, page)=> {
+    let response = fetch('/pdf-update?hash='+hash+'&page='+page, {
+        method: 'POST', // or 'PUT'
+      }).then(response => console.log(response))
+      .catch((error) => {
+        console.error('Error:', error);
+      });
+
+    console.log("pdf update response: ", response)
 }

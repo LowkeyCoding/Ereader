@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -52,6 +53,7 @@ func main() {
 	// setup GET routes
 	app.Get("/home", server.home)
 	app.Get("/pdf-viewer", server.pdfViewer)
+	app.Post("/pdf-update", server.pdfUpdate)
 	// start the server on the server.port
 	log.Fatal(app.Listen(server.port))
 }
@@ -62,6 +64,12 @@ type User struct {
 	ProfilePicture string `json: "profilepicture" db: "ProfilePicture"`
 	Password       string `json: "password" db: "Password"`
 	Username       string `json: "password" db: "Username"`
+}
+
+type PDF struct {
+	ID   string `json: "ID" db: "ID"`
+	Hash string `json: "Hash" db: "Hash"`
+	Page int    `json: "Page" db: "Page"`
 }
 
 // < ----- Server ----- >
@@ -167,9 +175,25 @@ func (server *Server) home(c *fiber.Ctx) {
 	}
 }
 
+// pdf-viewer
 func (server *Server) pdfViewer(c *fiber.Ctx) {
 	if err := c.Render("./views/pdf-viewer.handlebars", fiber.Map{}); err != nil {
 		c.Status(500).Send(err.Error())
+	}
+}
+
+// update pdf
+func (server *Server) pdfUpdate(c *fiber.Ctx) {
+	fmt.Println("Page:", c.Query("page"))
+	Page, err := strconv.Atoi(c.Query("page"))
+	if err != nil {
+		c.SendStatus(fiber.StatusBadRequest)
+	}
+	Hash := c.Query("hash")
+	fmt.Println("Hash:", c.Query("hash"))
+	err = server.updatePdfPageCount(Hash, Page)
+	if err != nil {
+		c.SendStatus(fiber.StatusBadRequest)
 	}
 }
 
@@ -226,6 +250,17 @@ func (server *Server) initDB() {
 		panic(err)
 	}
 	statement.Exec()
+	statement, err = server.db.Prepare(`
+		CREATE TABLE IF NOT EXISTS pdfs(
+			ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+			Hash TEXT,
+			Page INTEGER
+		);
+	`)
+	if err != nil {
+		panic(err)
+	}
+	statement.Exec()
 }
 
 // insertUser
@@ -242,10 +277,53 @@ func (server *Server) insertUser(username string, password string, profilepictur
 
 // getUserByUsername
 func (server *Server) getUserByUsername(username string) User {
-	result := server.db.QueryRow("select * from users where username=$1", username)
+	result := server.db.QueryRow("select * from users where Username=$1", username)
 	user := User{}
-	result.Scan(&user.ID, &user.Username, &user.Password)
+	result.Scan(&user.ID, &user.Username, &user.Password, &user.ProfilePicture)
 	return user
+}
+
+// insertPdf
+func (server *Server) insertPdf(hash string, page int) error {
+	statement, _ := server.db.Prepare(`
+		INSERT INTO pdfs (Hash, Page) values (?,?)
+	`)
+	_, err := statement.Exec(hash, page)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// updatePdfPageCount
+func (server *Server) updatePdfPageCount(hash string, page int) error {
+	statement, _ := server.db.Prepare(`
+		UPDATE pdfs SET Page=$1 WHERE Hash=$2
+	`)
+	result, err := statement.Exec(page, hash)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		err := server.insertPdf(hash, page)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// getPdfByHash
+func (server *Server) getPdfByHash(hash string) PDF {
+	result := server.db.QueryRow("select * from pdfs where Hash=$1", hash)
+	pdf := PDF{}
+	result.Scan(&pdf.ID, &pdf.Hash, &pdf.Page)
+	return pdf
 }
 
 // < ----- FLAGS ----- >

@@ -20,23 +20,15 @@
     <script src="/js/main.js"></script>
     {{#if config}}
         <script>
-            config = {
-                page:config.page,
-                cords:{
-                    x:config.x,
-                    y:config.y
-                }
+            const cfg = {
+                page: config.page,
             }
             init(config.link, document.getElementById("content"))
         </script>
     {{else}}
         <script>
-            config = {
-                page:1,
-                cords:{
-                    x:0,
-                    y:1000
-                }
+            cfg = {
+                page:1
             }
             init("/media/sample.pdf", document.getElementById("content"))
         </script>

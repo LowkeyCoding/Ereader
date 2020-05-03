@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./css/style.css">
+  <title>Login</title>
+</head>
+<body>
+  <div class="wrapper fadeInDown">
+    <div id="formContent">
+      <!-- Tabs Titles -->
+      {{#if signup}}
+        <h2 class="inactive underlineHover button" id="signinButton"> Sign In </h2>
+        <h2 class="active button" id="signupButton">Sign Up </h2>
+      {{else}}
+        <h2 class="active button" id="signinButton"> Sign In </h2>
+        <h2 class="inactive underlineHover button" id="signupButton">Sign Up </h2>
+      {{/if}}
+      <!-- Icon -->
+      <div class="fadeIn first">
+        <img src="./media/user-circle.svg" id="icon" alt="User Icon">
+      </div>
+
+      <!-- Login Form -->
+      {{#if signup}}
+        <form id="credentialsForm" action="/signup" method="post">
+          <input type="text" id="username" class="fadeIn second" name="username" placeholder="username">
+          <input type="text" id="password" class="fadeIn third" name="password" placeholder="password">
+          <input type="submit" id="actionButton" class="fadeIn fourth" value="Sign Up">
+        </form>
+      {{else}}
+        <form id="credentialsForm" action="/signin" method="post">
+          <input type="text" id="username" class="fadeIn second" name="username" placeholder="username">
+          <input type="text" id="password" class="fadeIn third" name="password" placeholder="password">
+          <input type="submit" id="actionButton" class="fadeIn fourth" value="Sign In">
+        </form>
+      {{/if}}
+      <!-- Remind Passowrd -->
+      <div id="formFooter">
+        <a class="underlineHover" href="#">Forgot Password?</a>
+      </div>
+
+    </div>
+  </div>
+  <div id="scripts">
+      <script src="./js/login_signup.js"></script>
+  </div>
+</body>
+</html>

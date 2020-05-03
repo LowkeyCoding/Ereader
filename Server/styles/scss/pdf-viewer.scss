@@ -1,0 +1,71 @@
+html {
+    margin: 0;
+    scrollbar-width: none;
+}
+
+body {
+    background-color: #2c2f33;
+    margin: 0;
+}
+
+.outline-toggle-icon {
+    margin: 0 auto;
+    text-align: center;
+    padding: 3px;
+    transition: 0.5s;
+}
+
+.outline-toggle {
+    background-color: #5e5e5e;
+    position: fixed;
+    float: left;
+    z-index: 2;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    border-radius: 0 0 50px 0;
+    box-shadow: 0 16px 16px 0 rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.19);
+    transition: 0.5s;
+}
+
+.outline {
+    box-shadow: 0 16px 16px 0 rgba(0, 0, 0, 0.5), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    padding-top: 40px;
+    scrollbar-width: none;
+    height: 100%;
+    /* 100% Full-height */
+    width: 0;
+    /* 0 width - change this with JavaScript */
+    position: fixed;
+    /* Stay in place */
+    z-index: 1;
+    /* Stay on top */
+    top: 0;
+    left: 0;
+    background-color: #111;
+    /* Black*/
+    overflow-x: hidden;
+    /* Disable horizontal scroll */
+    transition: 0.5s;
+    /* 0.5 second transition effect to slide in the sidebar */
+}
+
+subOutline {
+    padding: 4px 16px 4px 16px;
+    text-decoration: none;
+    font-size: 20px;
+    color: #818181;
+    display: block;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+outlineItem {
+    padding: 4px 16px 4px 16px;
+    text-decoration: none;
+    font-size: 20px;
+    color: #818181;
+    display: block;
+    transition: 0.3s;
+    cursor: pointer;
+}

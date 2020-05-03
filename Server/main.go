@@ -7,11 +7,13 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
+
+	files "./libs/files"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber"
-	jwtware "github.com/gofiber/jwt"
 	"github.com/gofiber/logger"
 	"github.com/gofiber/template"
 	_ "github.com/mattn/go-sqlite3"
@@ -24,6 +26,8 @@ func main() {
 	flags(server)
 	// Setup the database
 	server.initDB()
+	// setup the volume for the server.
+	server.volume = files.Volume{Name: "C:", Path: "./files"}
 	// Setup fiber
 	app := fiber.New()
 	app.Settings.TemplateEngine = template.Handlebars()
@@ -40,28 +44,24 @@ func main() {
 	app.Post("/signin", server.signin)
 	app.Post("/signup", server.signup)
 	// setup authentication routes
-	app.Use(jwtware.New(jwtware.Config{
+	/*app.Use(jwtware.New(jwtware.Config{
 		SigningKey:   []byte(server.secret),
 		TokenLookup:  "cookie:token",
 		ErrorHandler: server.jwtErrorHandler,
-	}))
+	}))*/
 	// setup GET routes
-	app.Get("/secret", func(c *fiber.Ctx) {
-		user := c.Locals("user").(*jwt.Token)
-		claims := user.Claims.(jwt.MapClaims)
-		name := claims["name"].(string)
-		c.Send("Welcome " + name)
-	})
-	app.Get("/home", server.session)
+	app.Get("/home", server.home)
+	app.Get("/pdf-viewer", server.pdfViewer)
 	// start the server on the server.port
 	log.Fatal(app.Listen(server.port))
 }
 
 // < ----- User ----- >
 type User struct {
-	ID       string `json: "ID" db: "ID"`
-	Password string `json: "password" db: "password"`
-	Username string `json: "password" db: "username"`
+	ID             string `json: "ID" db: "ID"`
+	ProfilePicture string `json: "profilepicture" db: "ProfilePicture"`
+	Password       string `json: "password" db: "Password"`
+	Username       string `json: "password" db: "Username"`
 }
 
 // < ----- Server ----- >
@@ -71,12 +71,12 @@ type Server struct {
 	db     *sql.DB
 	secret string
 	port   int
+	volume files.Volume
 }
 
 // Signup
 func (server *Server) signup(c *fiber.Ctx) {
-	user := &User{Username: c.FormValue("username"), Password: c.FormValue("password")}
-	fmt.Println("User: ", user)
+	user := &User{Username: c.FormValue("username"), Password: c.FormValue("password"), ProfilePicture: c.FormValue("profilepicture")}
 	if len(user.Username) < 3 || len(user.Password) < 6 {
 		c.SendStatus(fiber.StatusBadRequest)
 		return
@@ -86,10 +86,10 @@ func (server *Server) signup(c *fiber.Ctx) {
 		c.SendStatus(fiber.StatusForbidden)
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
-	fmt.Println("hashedPassword: ", string(hashedPassword))
-	err = server.insertUser(user.Username, string(hashedPassword))
+	err = server.insertUser(user.Username, string(hashedPassword), user.ProfilePicture)
 	if err != nil {
 		c.SendStatus(fiber.StatusInternalServerError)
+		fmt.Println(err.Error())
 		return
 	}
 	c.SendStatus(fiber.StatusOK)
@@ -97,7 +97,7 @@ func (server *Server) signup(c *fiber.Ctx) {
 
 // Signin
 func (server *Server) signin(c *fiber.Ctx) {
-	user := &User{Username: c.FormValue("username"), Password: c.FormValue("password")}
+	user := &User{Username: c.FormValue("username"), Password: c.FormValue("password"), ProfilePicture: c.FormValue("profilepicture")}
 	storedUser := server.getUserByUsername(user.Username)
 	if storedUser.ID == sql.ErrNoRows.Error() {
 		c.SendStatus(http.StatusUnauthorized)
@@ -108,6 +108,7 @@ func (server *Server) signin(c *fiber.Ctx) {
 		c.SendStatus(fiber.StatusUnauthorized)
 	}
 	server.generateJWTToken(c, user.Username)
+	c.Redirect("/home?path=/")
 }
 
 // Login
@@ -123,14 +124,51 @@ func (server *Server) login(c *fiber.Ctx) {
 	}
 }
 
-// session.
-func (server *Server) session(c *fiber.Ctx) {
-	user := c.Locals("user").(*jwt.Token)
-	claims := user.Claims.(jwt.MapClaims)
-	_user := fiber.Map{
-		"name": claims["name"].(string),
+// home
+func (server *Server) home(c *fiber.Ctx) {
+	//user := c.Locals("user").(*jwt.Token)
+	//claims := user.Claims.(jwt.MapClaims)
+	fmt.Println("Query path length: ", len(c.Query("path")))
+	qPath := server.volume.Path
+	if len(c.Query("path")) == 0 {
+		qPath += "/"
+	} else {
+		qPath += c.Query("path")
 	}
-	if err := c.Render("./views/session.handlebars", _user); err != nil {
+	fmt.Println("Query path: ", qPath)
+	files, err := server.volume.WalkFolder(qPath)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	path := strings.Split(qPath, "./")
+	path = strings.Split(path[1], "/")
+	path = delete_empty(path)
+	if err != nil {
+		c.Status(500).Send(err.Error())
+	}
+	endpath := ""
+	volumepath := ""
+	if len(path) < 2 {
+		endpath = server.volume.Name
+		path = nil
+	} else {
+		volumepath = server.volume.Name
+		endpath = path[len(path)-1]
+		path = path[1 : len(path)-1]
+	}
+	bind := fiber.Map{
+		"username": "claims[\"name\"].(string)",
+		"file":     files, "volumepath": volumepath,
+		"path":    path,
+		"endpath": endpath,
+	}
+	if err = c.Render("./views/home.handlebars", bind); err != nil {
+		c.Status(500).Send(err.Error())
+	}
+}
+
+func (server *Server) pdfViewer(c *fiber.Ctx) {
+	if err := c.Render("./views/pdf-viewer.handlebars", fiber.Map{}); err != nil {
 		c.Status(500).Send(err.Error())
 	}
 }
@@ -156,7 +194,6 @@ func (server *Server) generateJWTToken(c *fiber.Ctx, username string) {
 	cookie.Value = genToken
 	cookie.Expires = time.Now().Add(time.Hour * 72)
 	c.Cookie(cookie)
-	c.Redirect("/session")
 }
 
 // JWT error handler
@@ -172,7 +209,7 @@ func (server *Server) initDB() {
 	// Connect to the postgres db
 	//you might have to change the connection string to add your database credentials
 	var err error
-	server.db, err = sql.Open("sqlite3", "./Users.db")
+	server.db, err = sql.Open("sqlite3", "./database.db")
 	if err != nil {
 		panic(err)
 	}
@@ -181,7 +218,8 @@ func (server *Server) initDB() {
 		CREATE TABLE IF NOT EXISTS users(
 			ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 			Username TEXT,
-			Password TEXT
+			Password TEXT,
+			ProfilePicture TEXT
 		);
 	`)
 	if err != nil {
@@ -191,11 +229,11 @@ func (server *Server) initDB() {
 }
 
 // insertUser
-func (server *Server) insertUser(username string, password string) error {
+func (server *Server) insertUser(username string, password string, profilepicture string) error {
 	statement, _ := server.db.Prepare(`
-		INSERT INTO users (username, password) values (?,?)
+		INSERT INTO users (Username, Password, ProfilePicture) values (?,?,?)
 	`)
-	_, err := statement.Exec(username, password)
+	_, err := statement.Exec(username, password, profilepicture)
 	if err != nil {
 		return err
 	}
@@ -233,4 +271,15 @@ func stringWithCharset(length int, charset string) string {
 		b[i] = charset[seededRand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+// < ----- Helpers ----- >
+func delete_empty(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
 }

@@ -4,6 +4,7 @@
 $base-color: rgba(86, 186, 237, 1);
 $base-color-shadow: rgba(95,186,233,0.4);
 $base-color-hover: rgba(57, 172, 231, 1);
+$base-shadow: rgba(0, 0, 0, 0.3);
 
 $inputfield: rgba(246, 246, 246, 1);
 $inputfield-text: rgba(13, 13, 13, 1);
@@ -57,8 +58,8 @@ h2 {
   max-width: 450px;
   position: relative;
   padding: 0px;
-  -webkit-box-shadow: 0 30px 60px 0 rgba(0, 0, 0, 0.3);
-  box-shadow: 0 30px 60px 0 rgba(0, 0, 0, 0.3);
+  -webkit-box-shadow: 0 30px 60px 0 $base-shadow;
+  box-shadow: 0 30px 60px 0 $base-shadow;
   text-align: center;
 }
 
@@ -122,6 +123,36 @@ input {
   }
 
   &[type=text] {
+    background-color: $inputfield;
+    border: none;
+    color: $inputfield-text;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 5px;
+    width: 85%;
+    border: 2px solid $inputfield;
+    -webkit-transition: all 0.5s ease-in-out;
+    -moz-transition: all 0.5s ease-in-out;
+    -ms-transition: all 0.5s ease-in-out;
+    -o-transition: all 0.5s ease-in-out;
+    transition: all 0.5s ease-in-out;
+    -webkit-border-radius: 5px 5px 5px 5px;
+    border-radius: 5px 5px 5px 5px;
+
+    &:focus {
+      background-color: $inputfield-focus;
+      border-bottom: 2px solid $base-color-shadow;
+    }
+
+    &:placeholder {
+      color: #cccccc;
+    }
+  }
+
+  &[type=password] {
     background-color: $inputfield;
     border: none;
     color: $inputfield-text;
@@ -295,6 +326,7 @@ input {
 
 #icon {
   width: 48px;
+  border-radius: 50%;
 }
 
 * {

@@ -19,26 +19,27 @@
       {{/if}}
       <!-- Icon -->
       <div class="fadeIn first">
-        <img src="./media/user-circle.svg" id="icon" alt="User Icon">
+        <img src="./media/icons/user-circle.svg" id="icon" alt="User Icon">
       </div>
 
       <!-- Login Form -->
       {{#if signup}}
         <form id="credentialsForm" action="/signup" method="post">
           <input type="text" id="username" class="fadeIn second" name="username" placeholder="username">
-          <input type="text" id="password" class="fadeIn third" name="password" placeholder="password">
+          <input type="password" id="password" class="fadeIn third" name="password" placeholder="password">
+          <input type="text" id="profilepicture" class="fadeIn third" name="profilepicture" placeholder="profilepicture">
           <input type="submit" id="actionButton" class="fadeIn fourth" value="Sign Up">
         </form>
       {{else}}
         <form id="credentialsForm" action="/signin" method="post">
           <input type="text" id="username" class="fadeIn second" name="username" placeholder="username">
-          <input type="text" id="password" class="fadeIn third" name="password" placeholder="password">
+          <input type="password" id="password" class="fadeIn third" name="password" placeholder="password">
           <input type="submit" id="actionButton" class="fadeIn fourth" value="Sign In">
         </form>
       {{/if}}
       <!-- Remind Passowrd -->
       <div id="formFooter">
-        <a class="underlineHover" href="#">Forgot Password?</a>
+        <a id="forgotPassword" class="underlineHover" href="#">Forgot Password?</a>
       </div>
 
     </div>

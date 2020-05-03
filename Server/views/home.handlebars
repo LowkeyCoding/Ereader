@@ -1,1 +1,49 @@
-<p>{{name}}: is beautiful</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./css/filebrowser.css">
+      <script src="https://kit.fontawesome.com/74596594bf.js" crossorigin="anonymous"></script>
+    <title>Welcome {{username}}</title>
+</head>
+<body>
+    <div class="filebrowser">
+        <div class="breadcrumbs">
+            {{#if volumepath}}
+                <a href="/home?path=/">
+                    <span class="folderName">{{volumepath}}</span>
+                </a>
+                <span class="arrow">→</span>
+            {{/if}}
+            {{#each path}}
+                <a href="/home?path=/{{this}}">
+                    <span class="folderName">{{this}}</span>
+                </a> 
+                <span class="arrow">→</span>
+            {{/each}}
+            <span class="folderName">{{endpath}}</span>
+        </div>
+            <div class="container">
+                {{#each file}}
+                    <div class="fileContainer">
+                        <a class="file" id={{this.Hash}} href="/home?path={{this.Path}}">
+                            {{#if this.IsDir}}
+                                <i class="icon far fa-folder"></i>
+                            {{else}}
+                                <i class="icon far fa-file-alt"></i>
+                            {{/if}}
+                            <span class="name">{{this.Name}}</span>
+                            {{#if this.SizeSI}}
+                                <span class="details">{{this.SizeSI}}</span>
+                            {{else}}
+                                <span class="details">{{this.FileCount}} items</span>
+                            {{/if}}
+                        </a>
+                    </div>
+                {{/each}}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

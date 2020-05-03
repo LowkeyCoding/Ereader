@@ -1,47 +1,42 @@
-package file
+package files
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	hashdir "github.com/sger/go-hashdir"
+	"github.com/sger/go-hashdir"
 )
 
-// File ....
+// File defines the data about a given file
 type File struct {
 	Name             string `json:"Name"`
 	Path             string `json:"Path"`
 	Size             int64  `json:"Size"`
 	SizeSI           string `json:"SizeSI"`
 	IsDir            bool   `json:"IsDir"`
+	FileCount        int    `json:"FileCount"`
 	Extension        string `json:"Extension"`
 	ApplicaitionData string `json:"ApplicaitionData"`
 	Hash             string `json:"Hash"`
 }
 
-// Files ....
+// Files is a array of containing multiple instances of file.
 type Files []File
 
-func (file *File) createFileHash() (string, error) {
-	hasher := sha256.New()
-	bytes, err := ioutil.ReadFile(file.Path)
-	hasher.Write(bytes)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(hasher.Sum(nil)), nil
-}
-
+/*
+	converts bytes to kb/mb/gb/tb/pb/eb
+	the last two are a bit overkill but future proofing? xD
+*/
 func (file *File) fileSizeToSI() {
 	const unit = 1000
 	if file.Size < unit {
 		file.SizeSI = fmt.Sprintf("%d B", file.Size)
+		return
 	}
 	div, exp := int64(unit), 0
 	for n := file.Size / unit; n >= unit; n /= unit {
@@ -52,6 +47,18 @@ func (file *File) fileSizeToSI() {
 		float64(file.Size)/float64(div), "kMGTPE"[exp])
 }
 
+// creates sha256 has of the file.
+func (file *File) createFileHash() (string, error) {
+	hasher := sha256.New()
+	bytes, err := ioutil.ReadFile(file.Path)
+	hasher.Write(bytes)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hasher.Sum(nil)), nil
+}
+
+// creates a string representation of the file structure.
 func (file *File) toString() string {
 	return "Name: " + file.Name +
 		"\nSize: " + string(file.Size) +
@@ -62,17 +69,29 @@ func (file *File) toString() string {
 		"\n Hash: " + file.Hash
 }
 
-// Volume ....
+func (file *File) cleanPath(volumePath string) string {
+	// Clean the path up
+	Path := ""
+	Path = strings.ReplaceAll(file.Path, "//", "/")
+	Path = strings.ReplaceAll(Path, "/", "/")
+	Path = strings.Replace(Path, volumePath, "", 1)
+	return Path
+}
+
+// Volume contains the information about a given volume.
 type Volume struct {
 	Name string
 	Path string
 	Size int64
 }
 
-// WalkFolder returns a list of all files with json encoding of the given folder
-func (volume *Volume) WalkFolder(path string) ([]byte, error) {
+// Volumes is a array of containing multiple instances of Volume.
+type Volumes []Volume
+
+// WalkFolder takes in a path to a folder and returns a list of all the files inside the folder.
+func (volume *Volume) WalkFolder(path string) (Files, error) {
 	var files Files
-	path = volume.Path + path + "/"
+	path = volume.cleanPath(path) + "/"
 	filesInfo, err := ioutil.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -92,24 +111,33 @@ func (volume *Volume) WalkFolder(path string) ([]byte, error) {
 				return nil, err
 			}
 			file.Hash = Hash
+			file.Path = file.cleanPath(volume.Path)
 		} else {
 			Name := info.Name()
-			file = File{Name: Name, Path: Path, Size: Size, IsDir: IsDir}
+			fcount, err := ioutil.ReadDir(Path)
+			if err != nil {
+				return nil, err
+			}
+			file = File{Name: Name, Path: Path, Size: Size, IsDir: IsDir, FileCount: len(fcount)}
 			Hash, err := hashdir.Create(file.Path, "sha256")
 			if err != nil {
 				return nil, err
 			}
 			file.Hash = Hash
+			file.Path = file.cleanPath(volume.Path)
 		}
 		files = append(files, file)
 	}
-	jsonFiles, err := json.Marshal(files)
-	if err != nil {
-		return nil, err
-	}
-	return jsonFiles, nil
+	return files, nil
 }
 
+// getFile gets a file form the given path.
 func (volume *Volume) getFile(path string) ([]byte, error) {
 	return nil, nil
+}
+
+// cleanPath cleans the path so the user cannot escape outside the specifiede volume
+func (volume *Volume) cleanPath(path string) string {
+	path = strings.Replace(path, "../", "", -1)
+	return strings.Replace(path, "..", "", -1)
 }

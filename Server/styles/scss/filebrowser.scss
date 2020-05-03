@@ -1,0 +1,101 @@
+$base-color: rgba(86, 186, 237, 1);
+$base-color-shadow: rgba(95,186,233,0.4);
+$base-color-hover: rgba(57, 172, 231, 1);
+
+$base-white: rgba(246, 246, 246, 1);
+$base-white-shadow: rgba(0, 0, 0, 0.3);
+html {
+    background-color: $base-color;
+}
+body {
+    font: 14px normal Arial, Helvetica, sans-serif;
+}
+.filebrowser {
+    width: 95%;
+    max-width: 1340px;
+    position: relative;
+    margin: 100px auto 50px;
+    .breadcrumbs {
+        color: $base-white;
+        margin-left: 20px;
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 35px;
+        .arrow{
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 20px;
+        }
+        a {
+            color: $base-white;
+            text-decoration: none;
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+        /*
+        .folderName {
+
+        }
+        */
+    }
+    .container{
+        margin-top: 60px;
+        .fileContainer {
+            border-radius: 3px;
+            background-color: $base-white;
+            width: 307px;
+            height: 118px;
+            list-style-type: none;
+            margin: 10px;
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+            padding: 0.3em;
+            z-index: 1;
+            cursor: pointer;
+            box-sizing: border-box;
+            transition: 0.3s background-color;
+            -webkit-box-shadow: 0 7.5px 15px 0 $base-white-shadow;
+            box-shadow: 0 7.5px 15px 0 $base-white-shadow;
+            .file {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                align-items: center;
+                .icon {
+                    font-size: 64px;
+                    display: inline-block;
+                    padding: 0.375em;
+                    margin: auto auto;
+                    background-color: transparent;
+                    overflow: hidden;
+                }
+                .name {
+                    font-size: 15px;
+                    font-weight: 700;
+                    line-height: 20px;
+                    width: 150px;
+                    white-space: nowrap;
+                    display: inline-block;
+                    position: absolute;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    top: 40px;
+                }
+                .details {
+                    font-size: 13px;
+                    font-weight: 400;
+                    width: 55px;
+                    height: 10px;
+                    top: 64px;
+                    white-space: nowrap;
+                    position: absolute;
+                    display: inline-block;
+                }
+            }
+        }
+    }    
+}

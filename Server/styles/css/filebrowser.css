@@ -1,0 +1,99 @@
+html {
+  background-color: #56baed;
+}
+
+body {
+  font: 14px normal Arial, Helvetica, sans-serif;
+}
+
+.filebrowser {
+  width: 95%;
+  max-width: 1340px;
+  position: relative;
+  margin: 100px auto 50px;
+}
+.filebrowser .breadcrumbs {
+  color: #f6f6f6;
+  margin-left: 20px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 35px;
+  /*
+  .folderName {
+
+  }
+  */
+}
+.filebrowser .breadcrumbs .arrow {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 20px;
+}
+.filebrowser .breadcrumbs a {
+  color: #f6f6f6;
+  text-decoration: none;
+}
+.filebrowser .breadcrumbs a:hover {
+  text-decoration: underline;
+}
+.filebrowser .container {
+  margin-top: 60px;
+}
+.filebrowser .container .fileContainer {
+  border-radius: 3px;
+  background-color: #f6f6f6;
+  width: 307px;
+  height: 118px;
+  list-style-type: none;
+  margin: 10px;
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  padding: 0.3em;
+  z-index: 1;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: 0.3s background-color;
+  -webkit-box-shadow: 0 7.5px 15px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 7.5px 15px 0 rgba(0, 0, 0, 0.3);
+}
+.filebrowser .container .fileContainer .file {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+}
+.filebrowser .container .fileContainer .file .icon {
+  font-size: 64px;
+  display: inline-block;
+  padding: 0.375em;
+  margin: auto auto;
+  background-color: transparent;
+  overflow: hidden;
+}
+.filebrowser .container .fileContainer .file .name {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 20px;
+  width: 150px;
+  white-space: nowrap;
+  display: inline-block;
+  position: absolute;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  top: 40px;
+}
+.filebrowser .container .fileContainer .file .details {
+  font-size: 13px;
+  font-weight: 400;
+  width: 55px;
+  height: 10px;
+  top: 64px;
+  white-space: nowrap;
+  position: absolute;
+  display: inline-block;
+}
+
+/*# sourceMappingURL=filebrowser.css.map */

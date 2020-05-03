@@ -7,7 +7,7 @@ var pdf = {
     document: null,
     documentID: null,
     pageNumber: 1,
-    pagesRendered: 2,
+    pagesRendered: 4,
     scale: 0.6,
     container: null,
 };

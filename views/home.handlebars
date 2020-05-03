@@ -27,19 +27,27 @@
             <div class="container">
                 {{#each file}}
                     <div class="fileContainer">
-                        <a class="file" id={{this.Hash}} href="/home?path={{this.Path}}">
-                            {{#if this.IsDir}}
-                                <i class="icon far fa-folder"></i>
-                            {{else}}
-                                <i class="icon far fa-file-alt"></i>
-                            {{/if}}
-                            <span class="name">{{this.Name}}</span>
-                            {{#if this.SizeSI}}
+                        {{#if this.isPdf}}
+                            <a class="file" id={{this.Hash}} href="/pdf-viewer?path={{this.Path}}&hash={{this.Hash}}">
+                                <i class="icon far fa-file-pdf"></i>
+                                <span class="name">{{this.Name}}</span>
                                 <span class="details">{{this.SizeSI}}</span>
+                            </a>
+                        {{else}}
+                            {{#if this.isDir}}
+                                <a class="file" id={{this.Hash}} href="/home?path={{this.Path}}">
+                                    <i class="icon far fa-folder"></i>
+                                    <span class="name">{{this.Name}}</span>
+                                    <span class="details">{{this.FileCount}} items</span>
+                                </a>
                             {{else}}
-                                <span class="details">{{this.FileCount}} items</span>
+                                <a class="file" id={{this.Hash}} href="/volume/{{this.Path}}">
+                                    <i class="icon far fa-file-alt"></i>
+                                    <span class="name">{{this.Name}}</span>
+                                    <span class="details">{{this.SizeSI}}</span>
+                                </a>
                             {{/if}}
-                        </a>
+                        {{/if}}
                     </div>
                 {{/each}}
             </div>

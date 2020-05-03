@@ -21,9 +21,10 @@
     {{#if config}}
         <script>
             const cfg = {
-                page: config.page,
+                page: {{Page}},
+                hash: "{{Hash}}"
             }
-            init(config.link, document.getElementById("content"))
+            init("/volume/{{Path}}", document.getElementById("content"))
         </script>
     {{else}}
         <script>

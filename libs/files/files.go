@@ -19,6 +19,7 @@ type File struct {
 	Size             int64  `json:"Size"`
 	SizeSI           string `json:"SizeSI"`
 	IsDir            bool   `json:"IsDir"`
+	IsPdf            bool   `json:"IsPdf"`
 	FileCount        int    `json:"FileCount"`
 	Extension        string `json:"Extension"`
 	ApplicaitionData string `json:"ApplicaitionData"`
@@ -98,13 +99,18 @@ func (volume *Volume) WalkFolder(path string) (Files, error) {
 	}
 	for _, info := range filesInfo {
 		IsDir := info.IsDir()
+		isPdf := false
 		Size := info.Size()
 		Path := path + info.Name()
 		var file File
 		if !IsDir {
 			Extension := filepath.Ext(path + info.Name())
+			fmt.Println(Extension)
+			if Extension == ".pdf" {
+				isPdf = true
+			}
 			Name := strings.Split(info.Name(), Extension)[0]
-			file = File{Name: Name, Path: Path, Size: Size, IsDir: IsDir, Extension: Extension}
+			file = File{Name: Name, Path: Path, Size: Size, IsDir: IsDir, Extension: Extension, IsPdf: isPdf}
 			file.fileSizeToSI()
 			Hash, err := file.createFileHash()
 			if err != nil {

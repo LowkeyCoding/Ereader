@@ -7,3 +7,6 @@
 * save progress in a object using a hash of the book as the indentifier.  🗹 
 * save progrss in some sort of local db for cross device progress. 	🗹 
 * potentioally add multi user suport | Diffrent progress values for each user. 	🗹 
+* Make it so pdf viewer is a external program so it's easier to implement other programs for other files types.  ☐
+* Add basic support for running commands on files???? ☐'
+* Is this nextcloud now????

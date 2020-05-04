@@ -1,73 +1,71 @@
-html {
+* {
   margin: 0;
-  scrollbar-width: none;
+  padding: 0;
+  font-family: "Sen", sans-serif;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
+}
+*::-webkit-scrollbar-track {
+  background: #68C1EB;
+  border-radius: 20px;
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
+}
+*::-webkit-scrollbar-thumb {
+  background: #4386B1;
+  border-radius: 20px;
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
 }
 
 body {
-  background-color: #2c2f33;
-  margin: 0;
+  background-color: #56baed;
 }
 
-.outline-toggle-icon {
-  margin: 0 auto;
+.container {
+  width: 100%;
   text-align: center;
-  padding: 3px;
-  transition: 0.5s;
+  -webkit-box-shadow: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 60px 0 rgba(0, 0, 0, 0.4);
+  display: inline-block;
 }
 
-.outline-toggle {
-  background-color: #5e5e5e;
-  position: fixed;
-  float: left;
-  z-index: 2;
-  width: 50px;
-  height: 50px;
-  cursor: pointer;
-  border-radius: 0 0 50px 0;
-  box-shadow: 0 16px 16px 0 rgba(0, 0, 0, 0.2), 0 4px 8px 0 rgba(0, 0, 0, 0.19);
-  transition: 0.5s;
+#pdf-render {
+  margin: 0 auto;
+  -webkit-box-shadow: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 60px 0 rgba(0, 0, 0, 0.4);
+  margin-bottom: 66px;
 }
 
-.outline {
-  box-shadow: 0 16px 16px 0 rgba(0, 0, 0, 0.5), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-  padding-top: 40px;
-  scrollbar-width: none;
-  height: 100%;
-  /* 100% Full-height */
-  width: 0;
-  /* 0 width - change this with JavaScript */
-  position: fixed;
-  /* Stay in place */
-  z-index: 1;
-  /* Stay on top */
-  top: 0;
-  left: 0;
-  background-color: #111;
-  /* Black*/
-  overflow-x: hidden;
-  /* Disable horizontal scroll */
-  transition: 0.5s;
-  /* 0.5 second transition effect to slide in the sidebar */
+.rounded {
+  border-radius: 8px;
 }
 
-subOutline {
-  padding: 4px 16px 4px 16px;
-  text-decoration: none;
-  font-size: 20px;
-  color: #818181;
-  display: block;
-  transition: 0.3s;
-  cursor: pointer;
+.shadow {
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
 }
 
-outlineItem {
-  padding: 4px 16px 4px 16px;
-  text-decoration: none;
-  font-size: 20px;
-  color: #818181;
-  display: block;
-  transition: 0.3s;
-  cursor: pointer;
+#useroverlay {
+  position: -webkit-sticky;
+  /* Safari */
+  position: sticky;
+  left: 8px;
+  top: 8px;
+  padding: 8px 16px;
+  background-color: white;
+  width: fit-content;
+}
+#useroverlay p {
+  display: flex;
+  align-items: center;
+}
+#useroverlay a {
+  margin: 0px 8px;
+  color: #1fbec4;
+}
+
+img.circular {
+  border-radius: 50%;
 }
 
 /*# sourceMappingURL=pdf-viewer.css.map */

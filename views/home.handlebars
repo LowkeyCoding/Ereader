@@ -8,6 +8,22 @@
     <title>Welcome {{username}}</title>
 </head>
 <body>
+    <div id="useroverlay" class="shadow rounded">
+        <p>
+            {{#if username}}
+                {{#if profilepicture}}
+                    Welcome<a id="name" name="username">{{username}}</a>
+                    <img src="{{profilepicture}}" name="icon" class="circular" height="32" width="32" placeholder="icon">
+                {{else}}
+                    Welcome<a id="name" name="username">{{username}}</a>
+                    <img src="https://via.placeholder.com/128/5db3ad/ffffff/?text=?" name="icon" class="circular" height="32" width="32" placeholder="icon">
+                {{/if}}
+            {{else}}
+                Welcome<a id="name" name="username">User</a>
+                <img src="https://via.placeholder.com/128/5db3ad/ffffff/?text=U" name="icon" class="circular" height="32" width="32" placeholder="icon">
+            {{/if}}
+        </p>
+    </div>
     <div class="filebrowser">
         <div class="breadcrumbs">
             {{#if volumepath}}
@@ -24,33 +40,32 @@
             {{/each}}
             <span class="folderName">{{endpath}}</span>
         </div>
-            <div class="container">
-                {{#each file}}
-                    <div class="fileContainer">
-                        {{#if this.isPdf}}
-                            <a class="file" id={{this.Hash}} href="/pdf-viewer?path={{this.Path}}&hash={{this.Hash}}">
-                                <i class="icon far fa-file-pdf"></i>
+        <div class="container">
+            {{#each file}}
+                <div class="fileContainer">
+                    {{#if this.isPdf}}
+                        <a class="file" id={{this.Hash}} href="/pdf-viewer?path={{this.Path}}&hash={{this.Hash}}">
+                            <i class="icon far fa-file-pdf"></i>
+                            <span class="name">{{this.Name}}</span>
+                            <span class="details">{{this.SizeSI}}</span>
+                        </a>
+                    {{else}}
+                        {{#if this.isDir}}
+                            <a class="file" id={{this.Hash}} href="/home?path={{this.Path}}">
+                                <i class="icon far fa-folder"></i>
+                                <span class="name">{{this.Name}}</span>
+                                <span class="details">{{this.FileCount}} items</span>
+                            </a>
+                        {{else}}
+                            <a class="file" id={{this.Hash}} href="/volume/{{this.Path}}">
+                                <i class="icon far fa-file-alt"></i>
                                 <span class="name">{{this.Name}}</span>
                                 <span class="details">{{this.SizeSI}}</span>
                             </a>
-                        {{else}}
-                            {{#if this.isDir}}
-                                <a class="file" id={{this.Hash}} href="/home?path={{this.Path}}">
-                                    <i class="icon far fa-folder"></i>
-                                    <span class="name">{{this.Name}}</span>
-                                    <span class="details">{{this.FileCount}} items</span>
-                                </a>
-                            {{else}}
-                                <a class="file" id={{this.Hash}} href="/volume/{{this.Path}}">
-                                    <i class="icon far fa-file-alt"></i>
-                                    <span class="name">{{this.Name}}</span>
-                                    <span class="details">{{this.SizeSI}}</span>
-                                </a>
-                            {{/if}}
                         {{/if}}
-                    </div>
-                {{/each}}
-            </div>
+                    {{/if}}
+                </div>
+            {{/each}}
         </div>
     </div>
 </body>

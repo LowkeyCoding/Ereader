@@ -96,4 +96,55 @@ body {
   display: inline-block;
 }
 
+.rounded {
+  border-radius: 8px;
+}
+
+.shadow {
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
+}
+
+#useroverlay {
+  position: -webkit-sticky;
+  /* Safari */
+  position: sticky;
+  left: 8px;
+  top: 8px;
+  padding: 8px 16px;
+  background-color: white;
+  width: fit-content;
+}
+#useroverlay p {
+  display: flex;
+  align-items: center;
+}
+#useroverlay a {
+  margin: 0px 8px;
+  color: #1fbec4;
+}
+
+img.circular {
+  border-radius: 50%;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  font-family: "Sen", sans-serif;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
+}
+*::-webkit-scrollbar-track {
+  background: #68C1EB;
+  border-radius: 20px;
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
+}
+*::-webkit-scrollbar-thumb {
+  background: #4386B1;
+  border-radius: 20px;
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
+}
+
 /*# sourceMappingURL=filebrowser.css.map */

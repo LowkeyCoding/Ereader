@@ -1,0 +1,35 @@
+//doctype html
+head
+  meta[charset="UTF-8"]
+  meta[name="viewport"][content="width=device-width"][initial-scale="1.0"]
+  link[rel="stylesheet"][href="./css/style.css"]
+  title Login
+div.wrapper.fadeInDown
+  div#formContent
+    // Tabs Titles
+    if signup
+        h2#signinButton.inactive.underlineHover.button  Sign In 
+        h2#signupButton.active.button Sign Up 
+    else
+        h2#signinButton.active.button  Sign In 
+        h2#signupButton.inactive.underlineHover.button Sign Up 
+    // Icon
+    div.fadeIn.first
+    img#icon(src="./media/icons/user-circle.svg", alt="User Icon")
+    // Login Form
+    if signup
+        form#credentialsForm[action="/signup"][method="post"]
+          input#username.fadeIn.second[type="text"][name="username"][placeholder="username"]
+          input#password.fadeIn.third[type="password"][name="password"][placeholder="password"]
+          input#profilepicture.fadeIn.third[type="text"][name="profilepicture"][placeholder="profilepicture"]
+          input#actionButton.fadeIn.fourth[type="submit"][value="Sign Up"]
+    else
+        form#credentialsForm[action="/signin"][method="post"]
+          input#username.fadeIn.second[type="text"][name="username"][placeholder="username"]
+          input#password.fadeIn.third[type="password"][name="password"][placeholder="password"]
+          input#actionButton.fadeIn.fourth[type="submit"][value="Sign Up"]
+    // Remind Passowrd
+    div#formFooter
+      a#forgotPassword.underlineHover[href="#"] Forgot Password?
+div#scripts
+  script[src="./js/login_signup.js"]

@@ -26,7 +26,7 @@ func main() {
 	server.Volume = files.Volume{Name: "C:", Path: "./files"}
 	// Setup fiber
 	app := fiber.New()
-	app.Settings.TemplateEngine = template.Handlebars()
+	app.Settings.TemplateEngine = template.Amber()
 	// setup logger middleware
 	app.Use(logger.New())
 	// setup static routes

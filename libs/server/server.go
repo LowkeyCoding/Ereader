@@ -87,11 +87,11 @@ func (server *Server) Signin(c *fiber.Ctx) {
 // Login is the frontend used to both signin and signup.
 func (server *Server) Login(c *fiber.Ctx) {
 	if c.Path() == "/signup" {
-		if err := c.Render("./views/login.handlebars", fiber.Map{"signup": true}); err != nil {
+		if err := c.Render("./views/login.pug", fiber.Map{"signup": true}); err != nil {
 			c.Status(500).Send(err.Error())
 		}
 	} else {
-		if err := c.Render("./views/login.handlebars", fiber.Map{"signup": false}); err != nil {
+		if err := c.Render("./views/login.pug", fiber.Map{"signup": false}); err != nil {
 			c.Status(500).Send(err.Error())
 		}
 	}
@@ -133,14 +133,16 @@ func (server *Server) Home(c *fiber.Ctx) {
 	bind := fiber.Map{
 		"username":       claims["username"].(string),
 		"profilepicture": claims["profilepicture"].(string),
-		"file":           files, "volumepath": Volumepath,
+		"files":          files, "volumepath": Volumepath,
 		"path":    path,
 		"endpath": endpath,
 	}
-	if err = c.Render("./views/home.handlebars", bind); err != nil {
+	if err = c.Render("./views/home.pug", bind); err != nil {
 		c.Status(500).Send(err.Error())
 	}
 }
+
+// < ----- PDF EXTENSION ROUTE START ----- >
 
 // Pdf-viewer servers the page that renders the pdf.
 func (server *Server) PdfViewer(c *fiber.Ctx) {
@@ -170,7 +172,7 @@ func (server *Server) PdfViewer(c *fiber.Ctx) {
 		"username":       claims["username"].(string),
 		"profilepicture": claims["profilepicture"].(string),
 	}
-	if err := c.Render("./views/pdf-viewer.handlebars", bind); err != nil {
+	if err := c.Render("./views/pdf-viewer.pug", bind); err != nil {
 		c.Status(500).Send(err.Error())
 	}
 }
@@ -190,6 +192,8 @@ func (server *Server) PdfUpdate(c *fiber.Ctx) {
 		c.SendStatus(fiber.StatusBadRequest)
 	}
 }
+
+// < ----- PDF EXTENSION ROUTE STOP ----- >
 
 // Generate JWT token
 func (server *Server) generateJWTToken(c *fiber.Ctx, username string, profilepicture string) {
@@ -280,6 +284,8 @@ func (server *Server) GetUserByUsername(username string) User {
 	return user
 }
 
+// < ----- PDF EXTENSION DB START ----- >
+
 // InsertPdf inserts a pdf into the database
 func (server *Server) InsertPdf(user string, hash string, path string, page int) error {
 	statement, _ := server.DB.Prepare(`
@@ -322,6 +328,8 @@ func (server *Server) GetPdfByHash(user string, hash string) PDF {
 	result.Scan(&pdf.ID, &pdf.User, &pdf.Hash, &pdf.Path, &pdf.Page)
 	return pdf
 }
+
+// < ----- PDF EXTENSION DB STOP ----- >
 
 // < ----- Helpers ----- >
 func delete_empty(s []string) []string {

@@ -39,10 +39,12 @@ type PDF struct {
 
 // Server class
 type Server struct {
-	DB     *sql.DB
-	Secret string
-	Port   int
-	Volume files.Volume
+	DB       *sql.DB
+	Username string
+	Password string
+	Secret   string
+	Port     int
+	Volume   files.Volume
 }
 
 // Signup is the path used for createing a user. the username need to be  unique.
@@ -103,48 +105,67 @@ func (server *Server) Home(c *fiber.Ctx) {
 	user := c.Locals("user").(*jwt.Token)
 	claims := user.Claims.(jwt.MapClaims)
 
+	// Setup the query path.
 	qPath := server.Volume.Path
 	if len(c.Query("path")) == 0 {
 		qPath += "/"
 	} else {
 		qPath += c.Query("path")
 	}
-
+	// Walk the given folder and return a list of files
 	files, err := server.Volume.WalkFolder(qPath)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	path := strings.Split(qPath, "./")
-	path = strings.Split(path[1], "/")
-	path = delete_empty(path)
+	// Generate the path object used in the breadcrumbs.
+	paths := strings.Split(qPath, "./")
+	paths = strings.Split(paths[1], "/")
+	paths = deleteEmpty(paths)
 	if err != nil {
 		c.Status(500).Send(err.Error())
 	}
 	endpath := ""
 	Volumepath := ""
-	if len(path) < 2 {
+	if len(paths) < 2 {
 		endpath = server.Volume.Name
-		path = nil
+		paths = nil
 	} else {
 		Volumepath = server.Volume.Name
-		endpath = path[len(path)-1]
-		path = path[1 : len(path)-1]
+		endpath = paths[len(paths)-1]
+		paths = paths[1 : len(paths)-1]
 	}
+	// Generate the bindings for the amber template
+	tUser := server.GetUserByUsername(claims["username"].(string))
 	bind := fiber.Map{
-		"username":       claims["username"].(string),
-		"profilepicture": claims["profilepicture"].(string),
-		"files":          files, "volumepath": Volumepath,
-		"path":    path,
-		"endpath": endpath,
+		"user":       tUser,
+		"files":      files,
+		"volumepath": Volumepath,
+		"paths":      paths,
+		"endpath":    endpath,
 	}
+	// Render the amber template. It's .pug because i needed syntax higlighting
 	if err = c.Render("./views/home.pug", bind); err != nil {
+		c.Status(500).Send(err.Error())
+	}
+}
+
+// Settings is the page where you configure the icons and the webapps used for the diffrent file types. Atleast when it's implementet
+func (server *Server) Settings(c *fiber.Ctx) {
+	// Get current user information from the claims map.
+	user := c.Locals("user").(*jwt.Token)
+	claims := user.Claims.(jwt.MapClaims)
+	tUser := server.GetUserByUsername(claims["username"].(string))
+	bind := fiber.Map{
+		"user": tUser,
+	}
+	if err := c.Render("./views/settings.pug", bind); err != nil {
 		c.Status(500).Send(err.Error())
 	}
 }
 
 // < ----- PDF EXTENSION ROUTE START ----- >
 
-// Pdf-viewer servers the page that renders the pdf.
+// PdfViewer servers the page that renders the pdf.
 func (server *Server) PdfViewer(c *fiber.Ctx) {
 	// Get current user information from the claims map.
 	user := c.Locals("user").(*jwt.Token)
@@ -219,7 +240,7 @@ func (server *Server) generateJWTToken(c *fiber.Ctx, username string, profilepic
 	c.Cookie(cookie)
 }
 
-// JWT error handler
+// JwtErrorHandler handles errors involving JWT
 func (server *Server) JwtErrorHandler(c *fiber.Ctx, err error) {
 	fmt.Println("err:", err.Error())
 	c.Redirect("/signin", 302)
@@ -232,10 +253,13 @@ func (server *Server) InitDB() {
 	// Connect to the postgres db
 	//you might have to change the connection string to add your database credentials
 	var err error
-	server.DB, err = sql.Open("sqlite3", "./db/database.db")
+	server.DB, err = sql.Open("sqlite3", "file:./db/database.db?_auth&_auth_user="+server.Username+"&_auth_pass="+server.Password+"&_auth_crypt=sha256&cache=shared")
 	if err != nil {
 		panic(err)
 	}
+	// Protects the database by locking it to a single connection
+	server.DB.SetMaxOpenConns(1)
+
 	// Setup the database table if it doesn't exist'
 	statement, err := server.DB.Prepare(`
 		CREATE TABLE IF NOT EXISTS users(
@@ -266,9 +290,7 @@ func (server *Server) InitDB() {
 
 // InsertUser inserts a user into the database.
 func (server *Server) InsertUser(username string, password string, profilepicture string) error {
-	statement, _ := server.DB.Prepare(`
-		INSERT INTO users (Username, Password, ProfilePicture) values (?,?,?)
-	`)
+	statement, _ := server.DB.Prepare("INSERT INTO users (Username, Password, ProfilePicture) values (?,?,?)")
 	_, err := statement.Exec(username, password, profilepicture)
 	if err != nil {
 		return err
@@ -332,7 +354,7 @@ func (server *Server) GetPdfByHash(user string, hash string) PDF {
 // < ----- PDF EXTENSION DB STOP ----- >
 
 // < ----- Helpers ----- >
-func delete_empty(s []string) []string {
+func deleteEmpty(s []string) []string {
 	var r []string
 	for _, str := range s {
 		if str != "" {

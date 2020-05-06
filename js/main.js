@@ -24,13 +24,14 @@ const renderPage = num => {
       canvasContext: ctx,
       viewport
     };
-    window.scroll({ top: 0, left: 0, behavior: "smooth" })
     page.render(renderCtx).promise.then(() => {
         PDF.pageIsRendering = false;
+        window.scroll({ top: 0, left: 0, behavior: "smooth" })
         if (PDF.pageNumIsPending !== null) {
             renderPage(PDF.pageNumIsPending);
             PDF.pageNumIsPending = null;
         }
+        window.scroll({ top: 0, left: 0, behavior: "smooth" })
         updatePdfProgress()
     });
   });

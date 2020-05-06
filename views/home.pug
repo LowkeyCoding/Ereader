@@ -4,19 +4,19 @@ head
   meta[name="viewport"][content="width=device-width"][initial-scale="1.0"]
   link[rel="stylesheet"][href="./css/filebrowser.css"]
   script[src="https://kit.fontawesome.com/74596594bf.js"][crossorigin="anonymous"]
-  title Welcome #{username}
+  title Welcome #{user.Username}
 body
     div#useroverlay.shadow.rounded
-        if username
-            if profilepicture
+        if user.Username
+            if user.ProfilePicture
                 p
                     | Welcome 
-                    a#name[name="username"]#{username}
-                    img.circular[src=profilepicture][name="icon"][height=32][width=32][placeholder="icon"]
+                    a#name[name="username"]#{user.Username}
+                    img.circular[src=user.ProfilePicture][name="icon"][height=32][width=32][placeholder="icon"]
             else
                 p
                     | Welcome 
-                    a#name[name="username"]#{username}
+                    a#name[name="username"]#{user.Username}
                     img.circular[src="https://via.placeholder.com/128/5db3ad/ffffff/?text=?"][name="icon"][height=32][width=32][placeholder="icon"]
         else
             p
@@ -29,9 +29,9 @@ body
                 a[href="/home?path=/"]
                     span#folderName#{volumepath}
                 span#arrow→
-            each $p in path
-                a[href="/home?path=/"+$p]
-                    pan#folderName #{$p}
+            each $path in paths
+                a[href="/home?path=/"+$path]
+                    pan#folderName #{$path}
                 span#arrow→
             pan#folderName #{endpath}
                 div#container

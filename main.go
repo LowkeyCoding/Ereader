@@ -48,6 +48,7 @@ func main() {
 	}))
 	// setup GET routes
 	app.Get("/home", server.Home)
+	app.Get("/settings", server.Settings)
 	app.Get("/pdf-viewer", server.PdfViewer)
 	app.Post("/pdf-update", server.PdfUpdate)
 	// start the server on the server.port
@@ -59,9 +60,14 @@ func main() {
 func flags(server *Server.Server) {
 	secret := flag.String("secret", stringWithCharset(256, charset), "The secrect is a key used for signing the users JWT token")
 	port := flag.Int("port", 8080, "The port is the port used to server the server")
+	username := flag.String("username", "admin", "The Username is for the database to ensure the data is protected")
+	password := flag.String("password", "admin", "The Password is for the database to ensure the data is protected")
 	flag.Parse()
 	server.Secret = *secret
 	server.Port = *port
+	server.Username = *username
+	server.Password = *password
+
 }
 
 // < ----- Random Generators ----- >

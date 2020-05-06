@@ -105,7 +105,6 @@ func (volume *Volume) WalkFolder(path string) (Files, error) {
 		var file File
 		if !IsDir {
 			Extension := filepath.Ext(path + info.Name())
-			fmt.Println(Extension)
 			Name := strings.Split(info.Name(), Extension)[0]
 			file = File{Name: Name, Path: Path, Size: Size, IsDir: IsDir, Extension: Extension}
 			file.FileSizeToSI()

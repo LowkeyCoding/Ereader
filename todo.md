@@ -9,6 +9,11 @@
 
 * Make a mode where it shows book thumbnail instead of file icon.  ☐
 * Make it so pdf viewer is a external program so it's easier to implement other programs for other files types.  ☐
+    * Added Extension API
+        * Needs a way to generate Routes
+        * Needs a way to generate Database tables
+        * Needs a way to generate Database queries
+        * I need HELP sombody STOP ME
 * Add basic support for running commands on files????  ☐
 
 * Is this nextcloud now????

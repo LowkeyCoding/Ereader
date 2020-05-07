@@ -2,14 +2,13 @@ package server
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	files "../files"
+	Files "../files"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber"
 	"golang.org/x/crypto/bcrypt"
@@ -19,75 +18,11 @@ import (
 
 // User is a struct representing a user in the database
 type User struct {
-	ID             string       `json:"ID"`
-	Username       string       `json:"Username"`
-	Password       string       `json:"Password"`
-	ProfilePicture string       `json:"ProfilePicture"`
-	FileSettings   FileSettings `json:"FileSettings"`
-}
-
-// < ----- Settings ----- >
-
-// FileSetting is a struct representing the settings for a given file type.
-type FileSetting struct {
-	ID              string `json:"ID"`
-	Username        string `json:"ProfilePicture"`
-	Extension       string `json:"Extension"` // (.)type
-	IconLink        string `json:"IconLink"`
-	ApplicationLink string `json:"ApplicationLink"`
-}
-
-// ToJSON converts a given FileSetting to a JSON formattet string
-func (setting *FileSetting) ToJSON() (string, error) {
-	b, err := json.Marshal(&setting)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
-}
-
-// ToStruct converts a JSON formattet string into the structure
-func (setting *FileSetting) ToStruct(jsonData string) error {
-	jsonMap := FileSetting{}
-	err := json.Unmarshal([]byte(jsonData), &jsonMap)
-	if err != nil {
-		return err
-	}
-	*setting = jsonMap
-	return nil
-}
-
-// FileSettings is a array of multiple instances of FileSetting.
-// This is used to keep track of a induvidual users file settings.
-type FileSettings []FileSetting
-
-// ToJSON converts a given set of FileSettings it will be converted to a JSON formattet string
-func (settings *FileSettings) ToJSON() (string, error) {
-	b, err := json.Marshal(&settings)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
-}
-
-// ToStruct converts a JSON formattet string into the structure
-func (settings *FileSettings) ToStruct(jsonData string) error {
-	jsonMap := []FileSetting{}
-	err := json.Unmarshal([]byte(jsonData), &jsonMap)
-	if err != nil {
-		return err
-	}
-	*settings = jsonMap
-	return nil
-}
-
-// ToMap converts the FileSettings struct to a map with the setting extension as a key the individual settings.
-func (settings *FileSettings) ToMap() map[string]FileSetting {
-	settingsMap := make(map[string]FileSetting)
-	for _, setting := range *settings {
-		settingsMap[setting.Extension] = setting
-	}
-	return settingsMap
+	ID             string             `json:"ID"`
+	Username       string             `json:"Username"`
+	Password       string             `json:"Password"`
+	ProfilePicture string             `json:"ProfilePicture"`
+	FileSettings   Files.FileSettings `json:"FileSettings"`
 }
 
 // < ----- PDF ----- >
@@ -105,12 +40,13 @@ type PDF struct {
 
 // Server class
 type Server struct {
-	DB       *sql.DB
-	Username string
-	Password string
-	Secret   string
-	Port     int
-	Volume   files.Volume
+	DB        *sql.DB
+	Username  string
+	Password  string
+	Secret    string
+	Port      int
+	Volume    Files.Volume
+	IconsList map[string]bool
 }
 
 // < ----- POST ROUTES ----- >
@@ -156,12 +92,12 @@ func (server *Server) Signin(c *fiber.Ctx) {
 
 // UpdateSetting is used to either update or create a setting.
 func (server *Server) UpdateSetting(c *fiber.Ctx) {
-	fileSetting := &FileSetting{Username: c.FormValue("Username"), Extension: c.FormValue("Extension"), IconLink: c.FormValue("IconLink"), ApplicationLink: c.FormValue("ApplicationLink")}
+	fileSetting := &Files.FileSetting{Username: c.FormValue("Username"), Extension: c.FormValue("Extension"), ApplicationLink: c.FormValue("ApplicationLink")}
 	if fileSetting.Extension[0] != '.' {
 		c.SendStatus(fiber.StatusBadRequest)
 		return
 	}
-	err := server.UpdateFileSetting(fileSetting.Username, fileSetting.Extension, fileSetting.IconLink, fileSetting.ApplicationLink)
+	err := server.UpdateFileSetting(fileSetting.Username, fileSetting.Extension, fileSetting.ApplicationLink)
 	if err != nil {
 		c.SendStatus(fiber.StatusInternalServerError)
 		fmt.Println(err.Error())
@@ -222,13 +158,16 @@ func (server *Server) Home(c *fiber.Ctx) {
 	}
 	// Generate the bindings for the amber template
 	tUser := server.GetUserByUsername(claims["username"].(string))
+
+	settingsMap := tUser.FileSettings.ToMap()
+	files = files.AddFileSetting(settingsMap, server.IconsList)
+
 	bind := fiber.Map{
-		"user":         tUser,
-		"fileSettings": tUser.FileSettings,
-		"files":        files,
-		"volumepath":   Volumepath,
-		"paths":        paths,
-		"endpath":      endpath,
+		"user":       tUser,
+		"files":      files,
+		"volumepath": Volumepath,
+		"paths":      paths,
+		"endpath":    endpath,
 	}
 	// Render the amber template. It's .pug because i needed syntax higlighting
 	if err = c.Render("./views/home.pug", bind); err != nil {
@@ -243,7 +182,8 @@ func (server *Server) Settings(c *fiber.Ctx) {
 	claims := user.Claims.(jwt.MapClaims)
 	tUser := server.GetUserByUsername(claims["username"].(string))
 	bind := fiber.Map{
-		"user": tUser,
+		"user":         tUser,
+		"fileSettings": tUser.FileSettings,
 	}
 	if err := c.Render("./views/settings.pug", bind); err != nil {
 		c.Status(500).Send(err.Error())
@@ -367,7 +307,7 @@ func (server *Server) InitDB() {
 			ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 			Username TEXT,
 			Extension TEXT,
-			IconLink TEXT,
+			Icon TEXT,
 			ApplicationLink TEXT
 		);
 	`)
@@ -416,9 +356,9 @@ func (server *Server) GetUserByUsername(username string) User {
 // < ----- FILESETTINGS DB START ----- >
 
 // InsertFileSetting inserts a filesetting into the database.
-func (server *Server) InsertFileSetting(Username string, Extension string, IconLink string, ApplicationLink string) error {
-	statement, _ := server.DB.Prepare("INSERT INTO FileSettings (Username, Extension, IconLink, ApplicationLink) values (?,?,?,?)")
-	_, err := statement.Exec(Username, Extension, IconLink, ApplicationLink)
+func (server *Server) InsertFileSetting(Username string, Extension string, ApplicationLink string) error {
+	statement, _ := server.DB.Prepare("INSERT INTO FileSettings (Username, Extension, ApplicationLink) values (?,?,?)")
+	_, err := statement.Exec(Username, Extension, ApplicationLink)
 	if err != nil {
 		return err
 	}
@@ -426,11 +366,11 @@ func (server *Server) InsertFileSetting(Username string, Extension string, IconL
 }
 
 // UpdateFileSetting updates a FileSetting if the username and extension exits in the database. If it's not in the database the FileSetting will be insertet into the database.
-func (server *Server) UpdateFileSetting(Username string, Extension string, IconLink string, ApplicationLink string) error {
+func (server *Server) UpdateFileSetting(Username string, Extension string, ApplicationLink string) error {
 	statement, _ := server.DB.Prepare(`
-		UPDATE FileSettings SET IconLink=$1 AND ApplicationLink=$2 WHERE Extension=$3 AND Username=$4
+		UPDATE FileSettings SET ApplicationLink=$1 WHERE Extension=$2 AND Username=$3
 	`)
-	result, err := statement.Exec(IconLink, ApplicationLink, Extension, Username)
+	result, err := statement.Exec(ApplicationLink, Extension, Username)
 	if err != nil {
 		return err
 	}
@@ -440,7 +380,7 @@ func (server *Server) UpdateFileSetting(Username string, Extension string, IconL
 		return err
 	}
 	if affected == 0 {
-		err := server.InsertFileSetting(Username, Extension, IconLink, ApplicationLink)
+		err := server.InsertFileSetting(Username, Extension, ApplicationLink)
 		if err != nil {
 			return err
 		}
@@ -449,23 +389,23 @@ func (server *Server) UpdateFileSetting(Username string, Extension string, IconL
 }
 
 // GetFileSettingByUsernameAndExtension returns a single file settings for a given user and extension.
-func (server *Server) GetFileSettingByUsernameAndExtension(Username string, Extension string) FileSetting {
+func (server *Server) GetFileSettingByUsernameAndExtension(Username string, Extension string) Files.FileSetting {
 	result := server.DB.QueryRow("SELECT * FROM FileSettings WHERE Username=$1 AND Extension=$2", Username, Extension)
-	setting := FileSetting{}
-	result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.IconLink, &setting.ApplicationLink)
+	setting := Files.FileSetting{}
+	result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.Icon, &setting.ApplicationLink)
 	return setting
 }
 
 // GetFileSettingsByUsername returns a list of all file settings for a given user.
-func (server *Server) GetFileSettingsByUsername(Username string) FileSettings {
+func (server *Server) GetFileSettingsByUsername(Username string) Files.FileSettings {
 	result, err := server.DB.Query("SELECT * FROM FileSettings WHERE Username=$1", Username)
 	if err != nil {
 		panic(err)
 	}
-	fileSettings := FileSettings{}
+	fileSettings := Files.FileSettings{}
 	for result.Next() {
-		setting := FileSetting{}
-		result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.IconLink, &setting.ApplicationLink)
+		setting := Files.FileSetting{}
+		result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.Icon, &setting.ApplicationLink)
 		fileSettings = append(fileSettings, setting)
 	}
 	return fileSettings

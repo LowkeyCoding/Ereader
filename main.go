@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"strconv"
 	"time"
 
 	files "./libs/files"
+	Icons "./libs/icons"
 	Server "./libs/server"
 
 	"github.com/gofiber/fiber"
@@ -24,6 +24,7 @@ func main() {
 	flags(server)
 	// Setup the database
 	server.InitDB()
+	server.IconsList = Icons.GenerateIconsList()
 	// setup the volume for the server.
 	server.Volume = files.Volume{Name: "C:", Path: "./files"}
 	// Setup fiber
@@ -31,30 +32,44 @@ func main() {
 	app.Settings.TemplateEngine = template.Amber()
 	// setup logger middleware
 	app.Use(logger.New())
-	// setup static routes
+	/// < ----- STATIC ROUTES ----- >
+
 	app.Static("/css", "./styles/css")
 	app.Static("/js", "./js")
 	app.Static("/media", "./media")
 	app.Static("/volume", server.Volume.Path)
-	// setup GET routes
+
+	// < ----- GET ROUTES ----- >
+
 	app.Get("/signin", server.Login)
 	app.Get("/signup", server.Login)
-	// setup POST routes
+
+	// < ----- POST ROUTES ----- >
+
 	app.Post("/signin", server.Signin)
 	app.Post("/signup", server.Signup)
-	// setup authenticated routes
+
+	// < ----- PROTECTET ROUTES ----- >
+
 	app.Use(jwtware.New(jwtware.Config{
 		SigningKey:   []byte(server.Secret),
 		TokenLookup:  "cookie:token",
 		ErrorHandler: server.JwtErrorHandler,
 	}))
-	// setup GET routes
+
+	// < ----- GET ROUTES ----- >
+
 	app.Get("/home", server.Home)
 	app.Get("/settings", server.Settings)
 	app.Get("/pdf-viewer", server.PdfViewer)
+
+	// < ----- POST ROUTES ----- >
+
+	app.Post("/updateSetting", server.UpdateSetting)
 	app.Post("/pdf-update", server.PdfUpdate)
+
 	//test
-	test(server)
+	//test(server)
 	// start the server on the server.port
 	log.Fatal(app.Listen(server.Port))
 }
@@ -90,11 +105,8 @@ func stringWithCharset(length int, charset string) string {
 }
 
 func test(server *Server.Server) {
-	server.InsertUser("LowkeyCoding", "NC&Z$&$2WKMuAi", "https://cdn.discordapp.com/avatars/81361108551598080/1de94c520bd7ebd2b82fcfe0c2054aaf.png?size=128")
-	for i := 1; i <= 10; i++ {
-		iS := strconv.Itoa(i)
-		server.InsertFileSetting("LowkeyCoding", "."+iS, "Iconlink."+iS, "ApplicationLink"+iS)
-	}
+	//server.InsertUser("LowkeyCoding", "NC&Z$&$2WKMuAi", "https://cdn.discordapp.com/avatars/81361108551598080/1de94c520bd7ebd2b82fcfe0c2054aaf.png?size=128")
+	//server.InsertFileSetting("LowkeyCoding", ".pdf",  "/pdf-viewer")
 	user := server.GetUserByUsername("LowkeyCoding")
 	fmt.Println(user)
 }

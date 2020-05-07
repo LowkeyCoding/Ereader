@@ -3,6 +3,7 @@ package files
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -14,19 +15,41 @@ import (
 
 // File defines the data about a given file
 type File struct {
-	Name             string `json:"Name"`
-	Path             string `json:"Path"`
-	Size             int64  `json:"Size"`
-	SizeSI           string `json:"SizeSI"`
-	IsDir            bool   `json:"IsDir"`
-	FileCount        int    `json:"FileCount"`
-	Extension        string `json:"Extension"`
-	ApplicaitionData string `json:"ApplicaitionData"`
-	Hash             string `json:"Hash"`
+	Name        string      `json:"Name"`
+	Path        string      `json:"Path"`
+	Size        int64       `json:"Size"`
+	SizeSI      string      `json:"SizeSI"`
+	IsDir       bool        `json:"IsDir"`
+	FileCount   int         `json:"FileCount"`
+	Extension   string      `json:"Extension"`
+	FileSetting FileSetting `json:"FileSetting"`
+	Hash        string      `json:"Hash"`
 }
 
 // Files is a array of containing multiple instances of file.
 type Files []File
+
+func (files Files) AddFileSetting(settingsMap map[string]FileSetting, IconsList map[string]bool) Files {
+	for i := range files {
+		files[i].FileSetting = settingsMap[files[i].Extension]
+		if files[i].Extension != "" {
+			if IconsList[files[i].Extension[1:]] {
+				files[i].FileSetting.Icon = files[i].Extension[1:]
+			} else {
+				files[i].FileSetting.Icon = "txt"
+			}
+		}
+	}
+	return files
+}
+
+func (files *Files) ToJSON() (string, error) {
+	b, err := json.Marshal(&files)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
 
 /*
 FileSizeToSI converts bytes to kb/mb/gb/tb/pb/eb
@@ -66,7 +89,6 @@ func (file *File) ToString() string {
 		"\nExtension: " + file.Extension +
 		"\nIsDir: " + strconv.FormatBool(file.IsDir) +
 		"\nFileCount: " + strconv.Itoa(file.FileCount) +
-		"\nApplicaitionData: " + file.ApplicaitionData +
 		"\nHash: " + file.Hash
 }
 
@@ -78,6 +100,71 @@ func (file *File) CleanPath(volumePath string) string {
 	Path = strings.ReplaceAll(Path, "/", "/")
 	Path = strings.Replace(Path, volumePath, "", 1)
 	return Path
+}
+
+// < ----- Settings ----- >
+
+// FileSetting is a struct representing the settings for a given file type.
+type FileSetting struct {
+	ID              string `json:"ID"`
+	Username        string `json:"ProfilePicture"`
+	Extension       string `json:"Extension"` // (.)type
+	Icon            string `json:"Icon"`
+	IconValid       string `json:"IconValid"`
+	ApplicationLink string `json:"ApplicationLink"`
+}
+
+// ToJSON converts a given FileSetting to a JSON formattet string
+func (setting *FileSetting) ToJSON() (string, error) {
+	b, err := json.Marshal(&setting)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+// ToStruct converts a JSON formattet string into the structure
+func (setting *FileSetting) ToStruct(jsonData string) error {
+	jsonMap := FileSetting{}
+	err := json.Unmarshal([]byte(jsonData), &jsonMap)
+	if err != nil {
+		return err
+	}
+	*setting = jsonMap
+	return nil
+}
+
+// FileSettings is a array of multiple instances of FileSetting.
+// This is used to keep track of a induvidual users file settings.
+type FileSettings []FileSetting
+
+// ToJSON converts a given set of FileSettings it will be converted to a JSON formattet string
+func (settings *FileSettings) ToJSON() (string, error) {
+	b, err := json.Marshal(&settings)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+// ToStruct converts a JSON formattet string into the structure
+func (settings *FileSettings) ToStruct(jsonData string) error {
+	jsonMap := []FileSetting{}
+	err := json.Unmarshal([]byte(jsonData), &jsonMap)
+	if err != nil {
+		return err
+	}
+	*settings = jsonMap
+	return nil
+}
+
+// ToMap converts the FileSettings struct to a map with the setting extension as a key the individual settings.
+func (settings *FileSettings) ToMap() map[string]FileSetting {
+	settingsMap := make(map[string]FileSetting)
+	for _, setting := range *settings {
+		settingsMap[setting.Extension] = setting
+	}
+	return settingsMap
 }
 
 // Volume contains the information about a given volume.

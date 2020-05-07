@@ -3,7 +3,7 @@ head
   meta[charset="UTF-8"]
   meta[name="viewport"][content="width=device-width"][initial-scale="1.0"]
   link[rel="stylesheet"][href="./css/filebrowser.css"]
-  script[src="https://kit.fontawesome.com/74596594bf.js"][crossorigin="anonymous"]
+  link[rel="stylesheet"][href="./css/icons.min.css"]
   title Welcome #{user.Username}
 body
     div#useroverlay.shadow.rounded
@@ -40,16 +40,17 @@ body
                 div.fileContainer
                     if $file.IsDir
                         a.file[href="/home?path="+$file.Path]
-                            i.icon.far.fa-folder
+                            i.icon.fiv-viv.fiv-icon-folder
                             span.name #{$file.Name}
                             span.details #{$file.FileCount} Items
-                    else if $file.Extension == ".pdf"
-                        a.file[href="/pdf-viewer?path="+ $file.Path + "&hash=" + $file.Hash]
-                            i.icon.far.fa-file-pdf
-                            span.name #{$file.Name}
-                            span.details #{$file.SizeSI}
-                    else
-                        a.file[href="/volume"+$file.Path]
-                            i.icon.far.fa-file-alt
-                            span.name #{$file.Name}
-                            span.details #{$file.SizeSI}
+                    else 
+                        if $file.FileSetting.ApplicationLink
+                            a.file[href= $file.FileSetting.ApplicationLink+ "?path="+ $file.Path + "&hash=" + $file.Hash]
+                                i[class="icon fiv-viv fiv-icon-"+$file.FileSetting.Icon]
+                                span.name #{$file.Name}
+                                span.details #{$file.SizeSI}
+                        else
+                            a.file[href="/vloume"+ $file.Path]
+                                i[class="icon fiv-viv fiv-icon-"+$file.FileSetting.Icon]
+                                span.name #{$file.Name}
+                                span.details #{$file.SizeSI}

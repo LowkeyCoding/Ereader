@@ -68,8 +68,7 @@ body {
 .filebrowser .container .fileContainer .file .icon {
   font-size: 64px;
   display: inline-block;
-  padding: 0.375em;
-  margin: auto auto;
+  margin: 0.375em;
   background-color: transparent;
   overflow: hidden;
 }

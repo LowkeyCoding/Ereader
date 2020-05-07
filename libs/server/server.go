@@ -357,8 +357,8 @@ func (server *Server) GetUserByUsername(username string) User {
 
 // InsertFileSetting inserts a filesetting into the database.
 func (server *Server) InsertFileSetting(Username string, Extension string, ApplicationLink string) error {
-	statement, _ := server.DB.Prepare("INSERT INTO FileSettings (Username, Extension, ApplicationLink) values (?,?,?)")
-	_, err := statement.Exec(Username, Extension, ApplicationLink)
+	statement, _ := server.DB.Prepare("INSERT INTO FileSettings (Username, Extension, Icon, ApplicationLink) values (?,?,?,?)")
+	_, err := statement.Exec(Username, Extension, "", ApplicationLink)
 	if err != nil {
 		return err
 	}
@@ -405,7 +405,10 @@ func (server *Server) GetFileSettingsByUsername(Username string) Files.FileSetti
 	fileSettings := Files.FileSettings{}
 	for result.Next() {
 		setting := Files.FileSetting{}
-		result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.Icon, &setting.ApplicationLink)
+		err := result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.Icon, &setting.ApplicationLink)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 		fileSettings = append(fileSettings, setting)
 	}
 	return fileSettings

@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -32,15 +31,15 @@ func main() {
 	app.Settings.TemplateEngine = template.Amber()
 	// setup logger middleware
 	app.Use(logger.New())
-	/// < ----- STATIC ROUTES ----- >
+
+	// < ----- STATIC ROUTES ----- >
 
 	app.Static("/css", "./styles/css")
 	app.Static("/js", "./js")
 	app.Static("/media", "./media")
-	app.Static("/volume", server.Volume.Path)
 
 	// < ----- GET ROUTES ----- >
-
+	app.Get("/", server.Login)
 	app.Get("/signin", server.Login)
 	app.Get("/signup", server.Login)
 
@@ -57,6 +56,10 @@ func main() {
 		ErrorHandler: server.JwtErrorHandler,
 	}))
 
+	// < ----- STATIC ROUTES ----- >
+
+	app.Static("/volume", server.Volume.Path)
+
 	// < ----- GET ROUTES ----- >
 
 	app.Get("/home", server.Home)
@@ -68,8 +71,6 @@ func main() {
 	app.Post("/updateSetting", server.UpdateSetting)
 	app.Post("/pdf-update", server.PdfUpdate)
 
-	//test
-	//test(server)
 	// start the server on the server.port
 	log.Fatal(app.Listen(server.Port))
 }
@@ -102,11 +103,4 @@ func stringWithCharset(length int, charset string) string {
 		b[i] = charset[seededRand.Intn(len(charset))]
 	}
 	return string(b)
-}
-
-func test(server *Server.Server) {
-	//server.InsertUser("LowkeyCoding", "NC&Z$&$2WKMuAi", "https://cdn.discordapp.com/avatars/81361108551598080/1de94c520bd7ebd2b82fcfe0c2054aaf.png?size=128")
-	//server.InsertFileSetting("LowkeyCoding", ".pdf",  "/pdf-viewer")
-	user := server.GetUserByUsername("LowkeyCoding")
-	fmt.Println(user)
 }

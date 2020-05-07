@@ -106,12 +106,11 @@ func (file *File) CleanPath(volumePath string) string {
 
 // FileSetting is a struct representing the settings for a given file type.
 type FileSetting struct {
-	ID              string `json:"ID"`
-	Username        string `json:"ProfilePicture"`
-	Extension       string `json:"Extension"` // (.)type
-	Icon            string `json:"Icon"`
-	IconValid       string `json:"IconValid"`
-	ApplicationLink string `json:"ApplicationLink"`
+	ID              string `json:"ID" db:"ID"`
+	Username        string `json:"Username" db:"Username"`
+	Extension       string `json:"Extension" db:"Extension"` // (.)type
+	Icon            string `json:"Icon" db:"Icon"`
+	ApplicationLink string `json:"ApplicationLink" db:"ApplicationLink"`
 }
 
 // ToJSON converts a given FileSetting to a JSON formattet string

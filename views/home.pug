@@ -42,14 +42,14 @@ body
                         a.file[href="/home?path="+$file.Path]
                             i.icon.far.fa-folder
                             span.name #{$file.Name}
-                            span.details #{$file.FileCount}
+                            span.details #{$file.FileCount} Items
                     else if $file.Extension == ".pdf"
                         a.file[href="/pdf-viewer?path="+ $file.Path + "&hash=" + $file.Hash]
                             i.icon.far.fa-file-pdf
                             span.name #{$file.Name}
                             span.details #{$file.SizeSI}
                     else
-                        a.file[href="/home?path="+$file.Path]
+                        a.file[href="/volume"+$file.Path]
                             i.icon.far.fa-file-alt
                             span.name #{$file.Name}
                             span.details #{$file.SizeSI}

@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
 	"time"
 
 	files "./libs/files"
@@ -40,7 +42,7 @@ func main() {
 	// setup POST routes
 	app.Post("/signin", server.Signin)
 	app.Post("/signup", server.Signup)
-	// setup authentication routes
+	// setup authenticated routes
 	app.Use(jwtware.New(jwtware.Config{
 		SigningKey:   []byte(server.Secret),
 		TokenLookup:  "cookie:token",
@@ -51,6 +53,8 @@ func main() {
 	app.Get("/settings", server.Settings)
 	app.Get("/pdf-viewer", server.PdfViewer)
 	app.Post("/pdf-update", server.PdfUpdate)
+	//test
+	test(server)
 	// start the server on the server.port
 	log.Fatal(app.Listen(server.Port))
 }
@@ -83,4 +87,14 @@ func stringWithCharset(length int, charset string) string {
 		b[i] = charset[seededRand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+func test(server *Server.Server) {
+	server.InsertUser("LowkeyCoding", "NC&Z$&$2WKMuAi", "https://cdn.discordapp.com/avatars/81361108551598080/1de94c520bd7ebd2b82fcfe0c2054aaf.png?size=128")
+	for i := 1; i <= 10; i++ {
+		iS := strconv.Itoa(i)
+		server.InsertFileSetting("LowkeyCoding", "."+iS, "Iconlink."+iS, "ApplicationLink"+iS)
+	}
+	user := server.GetUserByUsername("LowkeyCoding")
+	fmt.Println(user)
 }

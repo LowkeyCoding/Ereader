@@ -2,6 +2,7 @@ package server
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -18,21 +19,86 @@ import (
 
 // User is a struct representing a user in the database
 type User struct {
-	ID             string `json: "ID" db: "ID"`
-	ProfilePicture string `json: "ProfilePicture" db: "ProfilePicture"`
-	Password       string `json: "Password" db: "Password"`
-	Username       string `json: "Username" db: "Username"`
+	ID             string       `json:"ID"`
+	Username       string       `json:"Username"`
+	Password       string       `json:"Password"`
+	ProfilePicture string       `json:"ProfilePicture"`
+	FileSettings   FileSettings `json:"FileSettings"`
+}
+
+// < ----- Settings ----- >
+
+// FileSetting is a struct representing the settings for a given file type.
+type FileSetting struct {
+	ID              string `json:"ID"`
+	Username        string `json:"ProfilePicture"`
+	Extension       string `json:"Extension"` // (.)type
+	IconLink        string `json:"IconLink"`
+	ApplicationLink string `json:"ApplicationLink"`
+}
+
+// ToJSON converts a given FileSetting to a JSON formattet string
+func (setting *FileSetting) ToJSON() (string, error) {
+	b, err := json.Marshal(&setting)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+// ToStruct converts a JSON formattet string into the structure
+func (setting *FileSetting) ToStruct(jsonData string) error {
+	jsonMap := FileSetting{}
+	err := json.Unmarshal([]byte(jsonData), &jsonMap)
+	if err != nil {
+		return err
+	}
+	*setting = jsonMap
+	return nil
+}
+
+// FileSettings is a array of multiple instances of FileSetting.
+// This is used to keep track of a induvidual users file settings.
+type FileSettings []FileSetting
+
+// ToJSON converts a given set of FileSettings it will be converted to a JSON formattet string
+func (settings *FileSettings) ToJSON() (string, error) {
+	b, err := json.Marshal(&settings)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+// ToStruct converts a JSON formattet string into the structure
+func (settings *FileSettings) ToStruct(jsonData string) error {
+	jsonMap := []FileSetting{}
+	err := json.Unmarshal([]byte(jsonData), &jsonMap)
+	if err != nil {
+		return err
+	}
+	*settings = jsonMap
+	return nil
+}
+
+// ToMap converts the FileSettings struct to a map with the setting extension as a key the individual settings.
+func (settings *FileSettings) ToMap() map[string]FileSetting {
+	settingsMap := make(map[string]FileSetting)
+	for _, setting := range *settings {
+		settingsMap[setting.Extension] = setting
+	}
+	return settingsMap
 }
 
 // < ----- PDF ----- >
 
 // PDF is a struct representing a pdf in the database
 type PDF struct {
-	ID   string `json: "ID" db: "ID"`
-	User string `json: "User" db: "User"`
-	Hash string `json: "Hash" db: "Hash"`
-	Path string `json: "Path" db: "Path"`
-	Page int    `json: "Page" db: "Page"`
+	ID       string
+	Username string
+	Hash     string
+	Path     string
+	Page     int
 }
 
 // < ----- Server ----- >
@@ -46,6 +112,8 @@ type Server struct {
 	Port     int
 	Volume   files.Volume
 }
+
+// < ----- POST ROUTES ----- >
 
 // Signup is the path used for createing a user. the username need to be  unique.
 func (server *Server) Signup(c *fiber.Ctx) {
@@ -85,6 +153,24 @@ func (server *Server) Signin(c *fiber.Ctx) {
 	server.generateJWTToken(c, user.Username, storedUser.ProfilePicture)
 	c.Redirect("/home?path=/")
 }
+
+// UpdateSetting is used to either update or create a setting.
+func (server *Server) UpdateSetting(c *fiber.Ctx) {
+	fileSetting := &FileSetting{Username: c.FormValue("Username"), Extension: c.FormValue("Extension"), IconLink: c.FormValue("IconLink"), ApplicationLink: c.FormValue("ApplicationLink")}
+	if fileSetting.Extension[0] != '.' {
+		c.SendStatus(fiber.StatusBadRequest)
+		return
+	}
+	err := server.UpdateFileSetting(fileSetting.Username, fileSetting.Extension, fileSetting.IconLink, fileSetting.ApplicationLink)
+	if err != nil {
+		c.SendStatus(fiber.StatusInternalServerError)
+		fmt.Println(err.Error())
+		return
+	}
+	c.SendStatus(fiber.StatusOK)
+}
+
+// < ----- GET ROUTES ----- >
 
 // Login is the frontend used to both signin and signup.
 func (server *Server) Login(c *fiber.Ctx) {
@@ -137,11 +223,12 @@ func (server *Server) Home(c *fiber.Ctx) {
 	// Generate the bindings for the amber template
 	tUser := server.GetUserByUsername(claims["username"].(string))
 	bind := fiber.Map{
-		"user":       tUser,
-		"files":      files,
-		"volumepath": Volumepath,
-		"paths":      paths,
-		"endpath":    endpath,
+		"user":         tUser,
+		"fileSettings": tUser.FileSettings,
+		"files":        files,
+		"volumepath":   Volumepath,
+		"paths":        paths,
+		"endpath":      endpath,
 	}
 	// Render the amber template. It's .pug because i needed syntax higlighting
 	if err = c.Render("./views/home.pug", bind); err != nil {
@@ -178,8 +265,8 @@ func (server *Server) PdfViewer(c *fiber.Ctx) {
 		pdf.Hash = Hash
 		pdf.Path = c.Query("path")
 		pdf.Page = 1
-		pdf.User = claims["username"].(string)
-		err := server.InsertPdf(pdf.User, pdf.Hash, pdf.Path, pdf.Page)
+		pdf.Username = claims["username"].(string)
+		err := server.InsertPdf(pdf.Username, pdf.Hash, pdf.Path, pdf.Page)
 		if err != nil {
 			fmt.Println(err.Error())
 			c.SendStatus(fiber.StatusBadRequest)
@@ -260,9 +347,9 @@ func (server *Server) InitDB() {
 	// Protects the database by locking it to a single connection
 	server.DB.SetMaxOpenConns(1)
 
-	// Setup the database table if it doesn't exist'
+	// Setup the user table if it doesn't exist'
 	statement, err := server.DB.Prepare(`
-		CREATE TABLE IF NOT EXISTS users(
+		CREATE TABLE IF NOT EXISTS Users(
 			ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 			Username TEXT,
 			Password TEXT,
@@ -273,10 +360,27 @@ func (server *Server) InitDB() {
 		panic(err)
 	}
 	statement.Exec()
+
+	// Setup the FileSettings table if it doesn't exist'
 	statement, err = server.DB.Prepare(`
-		CREATE TABLE IF NOT EXISTS pdfs(
+		CREATE TABLE IF NOT EXISTS FileSettings(
 			ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-			User TEXT,
+			Username TEXT,
+			Extension TEXT,
+			IconLink TEXT,
+			ApplicationLink TEXT
+		);
+	`)
+	if err != nil {
+		panic(err)
+	}
+	statement.Exec()
+
+	// Setup the pdfs table if it doesn't exist'
+	statement, err = server.DB.Prepare(`
+		CREATE TABLE IF NOT EXISTS PDFS(
+			ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+			Username TEXT,
 			Hash TEXT,
 			Path TEXT,
 			Page INTEGER
@@ -288,9 +392,11 @@ func (server *Server) InitDB() {
 	statement.Exec()
 }
 
+// < ----- USER DB START ----- >
+
 // InsertUser inserts a user into the database.
 func (server *Server) InsertUser(username string, password string, profilepicture string) error {
-	statement, _ := server.DB.Prepare("INSERT INTO users (Username, Password, ProfilePicture) values (?,?,?)")
+	statement, _ := server.DB.Prepare("INSERT INTO Users (Username, Password, ProfilePicture) values (?,?,?)")
 	_, err := statement.Exec(username, password, profilepicture)
 	if err != nil {
 		return err
@@ -300,32 +406,31 @@ func (server *Server) InsertUser(username string, password string, profilepictur
 
 // GetUserByUsername gets the user by their username and returns the user as a User object.
 func (server *Server) GetUserByUsername(username string) User {
-	result := server.DB.QueryRow("select * from users where Username=$1", username)
+	result := server.DB.QueryRow("select * from Users where Username=$1", username)
 	user := User{}
 	result.Scan(&user.ID, &user.Username, &user.Password, &user.ProfilePicture)
+	user.FileSettings = server.GetFileSettingsByUsername(username)
 	return user
 }
 
-// < ----- PDF EXTENSION DB START ----- >
+// < ----- FILESETTINGS DB START ----- >
 
-// InsertPdf inserts a pdf into the database
-func (server *Server) InsertPdf(user string, hash string, path string, page int) error {
-	statement, _ := server.DB.Prepare(`
-		INSERT INTO pdfs (User, Hash, Path, Page) values (?,?,?,?)
-	`)
-	_, err := statement.Exec(user, hash, path, page)
+// InsertFileSetting inserts a filesetting into the database.
+func (server *Server) InsertFileSetting(Username string, Extension string, IconLink string, ApplicationLink string) error {
+	statement, _ := server.DB.Prepare("INSERT INTO FileSettings (Username, Extension, IconLink, ApplicationLink) values (?,?,?,?)")
+	_, err := statement.Exec(Username, Extension, IconLink, ApplicationLink)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// UpdatePdfPageCount updates the current page count of a given pdf.
-func (server *Server) UpdatePdfPageCount(user string, hash string, path string, page int) error {
+// UpdateFileSetting updates a FileSetting if the username and extension exits in the database. If it's not in the database the FileSetting will be insertet into the database.
+func (server *Server) UpdateFileSetting(Username string, Extension string, IconLink string, ApplicationLink string) error {
 	statement, _ := server.DB.Prepare(`
-		UPDATE pdfs SET Page=$1 WHERE Hash=$2 AND User=$3
+		UPDATE FileSettings SET IconLink=$1 AND ApplicationLink=$2 WHERE Extension=$3 AND Username=$4
 	`)
-	result, err := statement.Exec(page, hash, user)
+	result, err := statement.Exec(IconLink, ApplicationLink, Extension, Username)
 	if err != nil {
 		return err
 	}
@@ -335,7 +440,67 @@ func (server *Server) UpdatePdfPageCount(user string, hash string, path string, 
 		return err
 	}
 	if affected == 0 {
-		err := server.InsertPdf(user, hash, path, page)
+		err := server.InsertFileSetting(Username, Extension, IconLink, ApplicationLink)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetFileSettingByUsernameAndExtension returns a single file settings for a given user and extension.
+func (server *Server) GetFileSettingByUsernameAndExtension(Username string, Extension string) FileSetting {
+	result := server.DB.QueryRow("SELECT * FROM FileSettings WHERE Username=$1 AND Extension=$2", Username, Extension)
+	setting := FileSetting{}
+	result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.IconLink, &setting.ApplicationLink)
+	return setting
+}
+
+// GetFileSettingsByUsername returns a list of all file settings for a given user.
+func (server *Server) GetFileSettingsByUsername(Username string) FileSettings {
+	result, err := server.DB.Query("SELECT * FROM FileSettings WHERE Username=$1", Username)
+	if err != nil {
+		panic(err)
+	}
+	fileSettings := FileSettings{}
+	for result.Next() {
+		setting := FileSetting{}
+		result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.IconLink, &setting.ApplicationLink)
+		fileSettings = append(fileSettings, setting)
+	}
+	return fileSettings
+}
+
+// < ----- PDF EXTENSION DB START ----- >
+
+// InsertPdf inserts a pdf into the database
+func (server *Server) InsertPdf(Username string, hash string, path string, page int) error {
+	statement, _ := server.DB.Prepare(`
+		INSERT INTO PDFS (Username, Hash, Path, Page) values (?,?,?,?)
+	`)
+	_, err := statement.Exec(Username, hash, path, page)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// UpdatePdfPageCount updates the current page count of a given pdf.
+func (server *Server) UpdatePdfPageCount(Username string, hash string, path string, page int) error {
+	statement, _ := server.DB.Prepare(`
+		UPDATE PDFS SET Page=$1 WHERE Hash=$2 AND Username=$3
+	`)
+	result, err := statement.Exec(page, hash, Username)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		err := server.InsertPdf(Username, hash, path, page)
 		if err != nil {
 			return err
 		}
@@ -344,10 +509,10 @@ func (server *Server) UpdatePdfPageCount(user string, hash string, path string, 
 }
 
 // GetPdfByHash gets the pdf from it's hash and returns it as a PDF object.
-func (server *Server) GetPdfByHash(user string, hash string) PDF {
-	result := server.DB.QueryRow("SELECT * FROM pdfs WHERE User=$1 AND Hash=$2", user, hash)
+func (server *Server) GetPdfByHash(Username string, hash string) PDF {
+	result := server.DB.QueryRow("SELECT * FROM PDF WHERE Username=$1 AND Hash=$2", Username, hash)
 	pdf := PDF{}
-	result.Scan(&pdf.ID, &pdf.User, &pdf.Hash, &pdf.Path, &pdf.Page)
+	result.Scan(&pdf.ID, &pdf.Username, &pdf.Hash, &pdf.Path, &pdf.Page)
 	return pdf
 }
 

@@ -453,7 +453,7 @@ func (server *Server) UpdatePdfPageCount(Username string, hash string, path stri
 
 // GetPdfByHash gets the pdf from it's hash and returns it as a PDF object.
 func (server *Server) GetPdfByHash(Username string, hash string) PDF {
-	result := server.DB.QueryRow("SELECT * FROM PDF WHERE Username=$1 AND Hash=$2", Username, hash)
+	result := server.DB.QueryRow("SELECT * FROM PDFS WHERE Username=$1 AND Hash=$2", Username, hash)
 	pdf := PDF{}
 	result.Scan(&pdf.ID, &pdf.Username, &pdf.Hash, &pdf.Path, &pdf.Page)
 	return pdf

@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"time"
 
+	ExtensionAPI "./libs/extension"
 	files "./libs/files"
 	Icons "./libs/icons"
 	Server "./libs/server"
@@ -77,7 +78,7 @@ func main() {
 	app.Post("/pdf-update", server.PdfUpdate)
 
 	// < ----- TEST ----- >
-	test(server.DB)
+	test(server.DB, app)
 	// start the server on the server.port
 	log.Fatal(app.Listen(server.Port))
 }
@@ -113,23 +114,25 @@ func stringWithCharset(length int, charset string) string {
 	return string(b)
 }
 
-func test(DB *sql.DB) {
-	//databaseTest(DB)
-	configTest() // Fails since it's a hughe struggle
+func test(DB *sql.DB, app *fiber.App) {
+	databaseTest(DB)
+	viewTest(DB, app)
+	//configTest() // Fails since it's a hughe struggle
 }
 
 func databaseTest(DB *sql.DB) {
-	dataBaseItems := Server.DatabaseItems{}
+	dataBaseItems := ExtensionAPI.DatabaseItems{}
 	for i := 0; i < 100; i++ {
-		dataBaseItems[stringWithCharset(5, charset2)] = Server.TEXT
+		dataBaseItems[stringWithCharset(5, charset2)] = ExtensionAPI.TEXT
 	}
-	dataBaseTable := Server.DatabaseTable{TableName: "TestTable", Items: dataBaseItems}
+	// Generate the database table.
+	dataBaseTable := ExtensionAPI.DatabaseTable{TableName: "TestTable", Items: dataBaseItems}
 	err := dataBaseTable.GenerateTable(DB)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
-	DatabaseQuery := Server.DatabaseQuery{TableName: "PDFS", DatabaseOperation: Server.INSERT, Contains: make(map[string]string)}
+	// Add item to a table
+	DatabaseQuery := ExtensionAPI.DatabaseQuery{TableName: "PDFS", DatabaseOperation: ExtensionAPI.INSERT, Contains: make(map[string]string)}
 	DatabaseQuery.Contains["Username"] = "\"LowkeyCoding\""
 	DatabaseQuery.Contains["Hash"] = "\"somehash\""
 	DatabaseQuery.Contains["Path"] = "\"/test\""
@@ -139,7 +142,18 @@ func databaseTest(DB *sql.DB) {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	DatabaseQuery = Server.DatabaseQuery{TableName: "PDFS", DatabaseOperation: Server.UPDATE, Contains: make(map[string]string), Set: make(map[string]string)}
+
+	// Get the item from a table
+	DatabaseQuery = ExtensionAPI.DatabaseQuery{TableName: "PDFS", DatabaseOperation: ExtensionAPI.SELECT, Contains: make(map[string]string)}
+	DatabaseQuery.Contains["Hash"] = "\"somehash\""
+
+	_, err = DatabaseQuery.GenerateQuery(DB)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// Update item form a table
+	DatabaseQuery = ExtensionAPI.DatabaseQuery{TableName: "PDFS", DatabaseOperation: ExtensionAPI.UPDATE, Contains: make(map[string]string), Set: make(map[string]string)}
 	DatabaseQuery.Contains["Hash"] = "\"somehash\""
 	DatabaseQuery.Set["Page"] = "2"
 
@@ -148,7 +162,8 @@ func databaseTest(DB *sql.DB) {
 		fmt.Println(err.Error())
 	}
 
-	DatabaseQuery = Server.DatabaseQuery{TableName: "PDFS", DatabaseOperation: Server.SELECT, Contains: make(map[string]string)}
+	// Get the item from a table
+	DatabaseQuery = ExtensionAPI.DatabaseQuery{TableName: "PDFS", DatabaseOperation: ExtensionAPI.SELECT, Contains: make(map[string]string)}
 	DatabaseQuery.Contains["Hash"] = "\"somehash\""
 
 	_, err = DatabaseQuery.GenerateQuery(DB)
@@ -156,7 +171,8 @@ func databaseTest(DB *sql.DB) {
 		fmt.Println(err.Error())
 	}
 
-	DatabaseQuery = Server.DatabaseQuery{TableName: "PDFS", DatabaseOperation: Server.DELETE, Contains: make(map[string]string)}
+	// Delete item form a table
+	DatabaseQuery = ExtensionAPI.DatabaseQuery{TableName: "PDFS", DatabaseOperation: ExtensionAPI.DELETE, Contains: make(map[string]string)}
 	DatabaseQuery.Contains["Hash"] = "\"somehash\""
 
 	_, err = DatabaseQuery.GenerateQuery(DB)
@@ -164,13 +180,18 @@ func databaseTest(DB *sql.DB) {
 		fmt.Println(err.Error())
 	}
 
-	DatabaseQuery = Server.DatabaseQuery{TableName: "PDFS", DatabaseOperation: Server.SELECT, Contains: make(map[string]string)}
+	// Get the item from a table
+	DatabaseQuery = ExtensionAPI.DatabaseQuery{TableName: "PDFS", DatabaseOperation: ExtensionAPI.SELECT, Contains: make(map[string]string)}
 	DatabaseQuery.Contains["Hash"] = "\"somehash\""
 
 	_, err = DatabaseQuery.GenerateQuery(DB)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+}
+
+func viewTest(DB *sql.DB, app *fiber.App) {
+
 }
 
 func configTest() {
@@ -238,14 +259,14 @@ func configTest() {
 }
 
 // InterfaceToExtension converts an interface to the Extension structure.
-func InterfaceToExtension(space string, m map[string]interface{}) Server.Extension {
-	var Extension Server.Extension
+func InterfaceToExtension(space string, m map[string]interface{}) ExtensionAPI.Extension {
+	var Extension ExtensionAPI.Extension
 	for k, v := range m {
 		if k == "Name" {
 			Extension.Name = v.(string)
 		} else if k == "Views" {
 			//v.(map[string]interface{}
-			var Views []Server.View
+			var Views []ExtensionAPI.View
 			if mv, ok := v.(map[string]interface{}); ok {
 				for _, v := range mv {
 					if mv2, ok := v.(map[string]interface{}); ok {
@@ -256,7 +277,7 @@ func InterfaceToExtension(space string, m map[string]interface{}) Server.Extensi
 			}
 		} else if k == "DatabaseTables" {
 			//v.(map[string]interface{}
-			var DatabaseQueries []Server.DatabaseTable
+			var DatabaseQueries []ExtensionAPI.DatabaseTable
 			if mv, ok := v.(map[string]interface{}); ok {
 				for _, v := range mv {
 					if mv2, ok := v.(map[string]interface{}); ok {
@@ -271,8 +292,8 @@ func InterfaceToExtension(space string, m map[string]interface{}) Server.Extensi
 }
 
 // InterfaceToView converts an interface to the View structure.
-func InterfaceToView(m map[string]interface{}) Server.View {
-	var View Server.View
+func InterfaceToView(m map[string]interface{}) ExtensionAPI.View {
+	var View ExtensionAPI.View
 	for k, v := range m {
 		switch k {
 		case "Path":
@@ -299,8 +320,8 @@ func InterfaceToView(m map[string]interface{}) Server.View {
 }
 
 // InterfaceToQuery converts an interface to the DatabaseQuery structure.
-func InterfaceToQuery(m map[string]interface{}) Server.DatabaseQuery {
-	var Query Server.DatabaseQuery
+func InterfaceToQuery(m map[string]interface{}) ExtensionAPI.DatabaseQuery {
+	var Query ExtensionAPI.DatabaseQuery
 	for k, v := range m {
 		switch k {
 		case "Contains":
@@ -310,21 +331,21 @@ func InterfaceToQuery(m map[string]interface{}) Server.DatabaseQuery {
 		case "TableName":
 			Query.TableName = v.(string)
 		case "DatabaseOperation":
-			Query.DatabaseOperation = v.(Server.DatabaseOperationType)
+			Query.DatabaseOperation = v.(ExtensionAPI.DatabaseOperationType)
 		}
 	}
 	return Query
 }
 
 // InterfaceToTable converts an interface to the DatabaseTable structure.
-func InterfaceToTable(m map[string]interface{}) Server.DatabaseTable {
-	var DatabaseTable Server.DatabaseTable
+func InterfaceToTable(m map[string]interface{}) ExtensionAPI.DatabaseTable {
+	var DatabaseTable ExtensionAPI.DatabaseTable
 	for k, v := range m {
 		switch k {
 		case "TableName":
 			DatabaseTable.TableName = v.(string)
 		case "Items":
-			DatabaseTable.Items = v.(Server.DatabaseItems)
+			DatabaseTable.Items = v.(ExtensionAPI.DatabaseItems)
 		}
 	}
 	return DatabaseTable

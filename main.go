@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -41,6 +42,7 @@ func main() {
 	app.Static("/media", "./media")
 
 	// < ----- GET ROUTES ----- >
+
 	app.Get("/", server.Login)
 	app.Get("/signin", server.Login)
 	app.Get("/signup", server.Login)
@@ -71,7 +73,9 @@ func main() {
 	// < ----- POST ROUTES ----- >
 
 	app.Post("/updateSetting", server.UpdateSetting)
+	app.Post("/query", server.Query)
 	app.Post("/pdf-update", server.PdfUpdate)
+
 	// < ----- TEST ----- >
 	test(server.DB)
 	// start the server on the server.port
@@ -110,6 +114,11 @@ func stringWithCharset(length int, charset string) string {
 }
 
 func test(DB *sql.DB) {
+	//databaseTest(DB)
+	configTest() // Fails since it's a hughe struggle
+}
+
+func databaseTest(DB *sql.DB) {
 	dataBaseItems := Server.DatabaseItems{}
 	for i := 0; i < 100; i++ {
 		dataBaseItems[stringWithCharset(5, charset2)] = Server.TEXT
@@ -125,8 +134,151 @@ func test(DB *sql.DB) {
 	DatabaseQuery.Contains["Hash"] = "\"somehash\""
 	DatabaseQuery.Contains["Path"] = "\"/test\""
 	DatabaseQuery.Contains["Page"] = "1"
-	err = DatabaseQuery.Query(DB)
+
+	_, err = DatabaseQuery.GenerateQuery(DB)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+	DatabaseQuery = Server.DatabaseQuery{TableName: "PDFS", DatabaseOperation: Server.UPDATE, Contains: make(map[string]string), Set: make(map[string]string)}
+	DatabaseQuery.Contains["Hash"] = "\"somehash\""
+	DatabaseQuery.Set["Page"] = "2"
+
+	_, err = DatabaseQuery.GenerateQuery(DB)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	DatabaseQuery = Server.DatabaseQuery{TableName: "PDFS", DatabaseOperation: Server.SELECT, Contains: make(map[string]string)}
+	DatabaseQuery.Contains["Hash"] = "\"somehash\""
+
+	_, err = DatabaseQuery.GenerateQuery(DB)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	DatabaseQuery = Server.DatabaseQuery{TableName: "PDFS", DatabaseOperation: Server.DELETE, Contains: make(map[string]string)}
+	DatabaseQuery.Contains["Hash"] = "\"somehash\""
+
+	_, err = DatabaseQuery.GenerateQuery(DB)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	DatabaseQuery = Server.DatabaseQuery{TableName: "PDFS", DatabaseOperation: Server.SELECT, Contains: make(map[string]string)}
+	DatabaseQuery.Contains["Hash"] = "\"somehash\""
+
+	_, err = DatabaseQuery.GenerateQuery(DB)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+}
+
+func configTest() {
+	config := `
+	{
+		"Name":"PDFReader",
+		"Routes":{
+				"updatePageCount": {
+					"Path":"/updatePageCount",
+					"Methode":"POST",
+					"View":"",
+					"FormValueNames": [],
+					"ParameterNames": [],
+					"DatabaseQueries": []
+				},
+				"getPDF":{
+					"Path":"/GetPdfByHash",
+					"Methode":"POST",
+					"View":"",
+					"FormValueNames": [],
+					"ParameterNames": ["HASH"],
+					"DatabaseQueries": []
+				},
+		},
+		"DatabaseQueries":{
+			"UpdatePageCount":{
+				"Result":{
+
+				},
+				"Contains":{
+					"Hash":"Hash",
+					"Username":"Hash"
+				},
+				"Set":{
+					"Page":"PageNumber"
+				},
+				"TableName":"PDFS",
+				"DatabaseOperation":"UPDATE"
+			}
+		},
+		"DatabaseTables":{
+			"PDFS":{
+				"ID":"INTERGER",
+				"Username":"TEXT",
+				"Hash":"TEXT",
+				"Path":"TEXT",
+				"Page":"INTEGER"
+			}
+		}
+	 }
+	`
+	jsonMap := make(map[string]interface{})
+	err := json.Unmarshal([]byte(config), &jsonMap)
+	if err != nil {
+		panic(err)
+	}
+	dumpMap("", jsonMap)
+}
+
+func dumpMap(space string, m map[string]interface{}) {
+	var Extension Server.Extension
+	for k, v := range m {
+		if k == "Name" {
+			Extension.Name = v.(string)
+		}
+		if k == "Routes" {
+			//v.(map[string]interface{}
+			var Routes []Server.Route
+			if mv, ok := v.(map[string]interface{}); ok {
+				for _, v := range mv {
+					if mv2, ok := v.(map[string]interface{}); ok {
+						Routes = append(Routes, dumpRoute(mv2))
+					}
+				}
+				Extension.Routes = Routes
+			}
+		}
+		if k == "DatabaseQueries" {
+			//v.(map[string]interface{}
+			var DatabaseQueries []Server.DatabaseQuery
+			if mv, ok := v.(map[string]interface{}); ok {
+				for _, v := range mv {
+					if mv2, ok := v.(map[string]interface{}); ok {
+						DatabaseQueries = append(DatabaseQueries, dumpDatabaseQuery(mv2))
+					}
+				}
+				//Extension = DatabaseQueries
+			}
+		}
+	}
+}
+
+func dumpRoute(m map[string]interface{}) Server.Route {
+	var Route Server.Route
+	for k, v := range m {
+		fmt.Println("key: ", k, "value: ", v)
+		switch k {
+		case "Path":
+			Route.Path = v.(string)
+		case "View":
+			Route.View = v.(string)
+		case "DatabaseQueries":
+			Route.DatabaseQueries = v.([]Server.DatabaseQuery)
+		}
+	}
+	return Route
+}
+
+func dumpDatabaseQuery(m map[string]interface{}) Server.DatabaseQuery {
+	return Server.DatabaseQuery{}
 }

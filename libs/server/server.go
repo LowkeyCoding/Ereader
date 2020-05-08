@@ -107,6 +107,17 @@ func (server *Server) UpdateSetting(c *fiber.Ctx) {
 	c.SendStatus(fiber.StatusOK)
 }
 
+// Query is the path used by extension to query their database table.
+func (server *Server) Query(c *fiber.Ctx) {
+	var databaseQuery DatabaseQuery
+	c.BodyParser(databaseQuery)
+	result, err := databaseQuery.GenerateQuery(server.DB)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	c.Send(result)
+}
+
 // < ----- GET ROUTES ----- >
 
 // Login is the frontend used to both signin and signup.
@@ -466,21 +477,39 @@ func (server *Server) GetPdfByHash(Username string, hash string) PDF {
 
 //Extension ..
 type Extension struct {
-	Routes          []Route
-	DatabaseQueries []DatabaseQuery
-	DatabaseTables  []DatabaseTable
-	Structs         map[string][]map[string]interface{}
+	Name           string          `json:"Name"`
+	Routes         []Route         `json:"Routes"`
+	DatabaseTables []DatabaseTable `json:"DatabaseTable"`
 }
 
 // Route ..
 type Route struct {
-	Path            string          // The path the view will be rendered to.
-	View            string          // The view name. Will be used to select the correct view to render.
-	FormValueNames  []string        // The result will be passed to the tempalte generator or the database queries depending on the config.
-	ParameterNames  []string        // The result will be passed to the tempalte generator or the database queries depending on the config.
-	DatabaseQueries []DatabaseQuery // The result will be passed to the tempalte generator.
-	config          string          // well dunno how the config is gonna work yet...
+	Path               string        `json:"Path"`               // The path the view will be rendered to.
+	View               string        `json:"View"`               // The view name. Will be used to select the correct view to render.
+	NeedsQuerying      bool          `json:"needsQuerying"`      // The flag to enable querying
+	QueryVariableNames []string      `json:"QueryVariableNames"` // Contains a a list of variable names used in the DatabaseQuery if it is set.
+	DatabaseQuery      DatabaseQuery `json:"DatabaseQueries"`    // The result will be passed to the tempalte generator.
 }
+
+// RouteMethod defines the allowed HTTP methods.
+type RouteMethod string
+
+func (method *RouteMethod) String() string {
+	switch *method {
+	case GET:
+		return "GET"
+	case POST:
+		return "POST"
+	}
+	return ""
+}
+
+const (
+	// GET HTTP. The GET Method is used to request data from a specified resource.
+	GET RouteMethod = "GET"
+	// POST HTTP. The POST Method is used to send data to a server to create/update a resource.
+	POST RouteMethod = "POST"
+)
 
 // DatabaseItemType Defines the allowed types of values for the database.
 type DatabaseItemType string
@@ -538,7 +567,7 @@ const (
 	SELECT DatabaseOperationType = "SELECT"
 	// UPDATE sqlite3. SQLite UPDATE statement is used to  modify the existing records in a table. You can use WHERE clause with UPDATE query to update selected rows, otherwise all the rows would be updated.
 	UPDATE DatabaseOperationType = "UPDATE"
-	// DELETE statement is used to delete  the existing records from a table. You can use WHERE clause with DELETE query to delete the selected rows, otherwise all the records would be deleted.
+	// DELETE sqlite3. SQLite DELETE statement is used to delete  the existing records from a table. You can use WHERE clause with DELETE query to delete the selected rows, otherwise all the records would be deleted.
 	DELETE DatabaseOperationType = "DELETE"
 )
 
@@ -548,8 +577,8 @@ type DatabaseItems map[string]DatabaseItemType
 
 //DatabaseTable ..
 type DatabaseTable struct {
-	TableName string
-	Items     DatabaseItems
+	TableName string        `json:"TableName"`
+	Items     DatabaseItems `json:"Items"`
 }
 
 // GenerateTable generates the given database table if it doesn't exist'.
@@ -575,68 +604,130 @@ func (database *DatabaseTable) GenerateTable(DB *sql.DB) error {
 	return nil
 }
 
-//DatabaseQuery ..
+//DatabaseQuery the structure that containse teh data representation of a database query.
 type DatabaseQuery struct {
-	Result            []map[string]interface{}
-	Contains          map[string]string
-	TableName         string
-	DatabaseOperation DatabaseOperationType
+	Result            []map[string]interface{} `json:"Result"`
+	Contains          map[string]string        `json:"Contains"`
+	Set               map[string]string        `json:"Set"`
+	TableName         string                   `json:"TableName"`
+	DatabaseOperation DatabaseOperationType    `json:"DatabaseOperation"`
 }
 
-// Query constructs the query based on the information provided from the DatabaseQuery
-func (query *DatabaseQuery) Query(DB *sql.DB) error {
+// GenerateQuery constructs the query based on the information provided from the DatabaseQuery
+func (query *DatabaseQuery) GenerateQuery(DB *sql.DB) (string, error) {
 	Query := ""
-	i := 0
 	switch query.DatabaseOperation {
 	case INSERT:
-		//INSERT INTO PDFS (Username, Hash, Path, Page) values (?,?,?,?)
-		Query = query.DatabaseOperation.String() + " INTO " + query.TableName + " ("
-		keyMap := make(map[int]string)
-		i = 0
-		for key := range query.Contains {
-			keyMap[i] = key
-			if i < len(query.Contains)-1 {
-				Query += key + ","
-			} else {
-				Query += key + ")"
-			}
-			i++
-		}
-		Query += " VALUES ("
-		for j := 0; j < i; j++ {
-			if j < i-1 {
-				Query += query.Contains[keyMap[j]] + ","
-			} else {
-				Query += query.Contains[keyMap[j]] + ")"
-			}
-		}
-
+		Query = query.Insert()
 	case SELECT:
-		// SELECT * FROM PDFS WHERE Username=$1 AND Hash=$2
-		Query = query.DatabaseOperation.String() + " * FROM " + query.TableName
-		i = 0
-		if len(query.Contains) > 0 {
-			Query += " WHERE "
-			for key, value := range query.Contains {
-				if i < len(query.Contains) {
-					Query += key + "=" + value
-				} else {
-					Query += key + "=" + value + " AND "
-				}
-				i++
-			}
-		}
+		Query = query.Select()
+	case UPDATE:
+		Query = query.Update()
+	case DELETE:
+		Query = query.Delete()
 	}
 	fmt.Println("Query: ", Query)
 	rows, err := DB.Query(Query)
 	if err != nil {
-		return err
+		return "", err
 	}
-	query.LoadResultIntoMap(rows)
-	return nil
+	err = query.LoadResultIntoMap(rows)
+	if err != nil {
+		return "", err
+	}
+	// If you want it pretty-printed
+	resultJSONBYTE, err := json.MarshalIndent(query.Result, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	resultJSON := string(resultJSONBYTE)
+	return resultJSON, nil
 }
 
-// LoadResultIntoMap ..
+// Insert sqlite3. SQLite INSERT INTO Statement is used to add new rows of data into a table in the database.
+func (query *DatabaseQuery) Insert() string {
+	Query := query.DatabaseOperation.String() + " INTO " + query.TableName + " ("
+	keyMap := make(map[int]string)
+	i := 0
+	for key := range query.Contains {
+		keyMap[i] = key
+		if i < len(query.Contains)-1 {
+			Query += key + ","
+		} else {
+			Query += key + ")"
+		}
+		i++
+	}
+	Query += " VALUES ("
+	for j := 0; j < i; j++ {
+		if j < i-1 {
+			Query += query.Contains[keyMap[j]] + ","
+		} else {
+			Query += query.Contains[keyMap[j]] + ")"
+		}
+	}
+	return Query
+}
+
+// Select sqlite3. SQLite SELECT statement is used to fetch the data from a SQLite database table which returns data in the form of a result table.
+func (query *DatabaseQuery) Select() string {
+	Query := query.DatabaseOperation.String() + " * FROM " + query.TableName
+	i := 0
+	if len(query.Contains) > 0 {
+		Query += " WHERE "
+		for key, value := range query.Contains {
+			if i < len(query.Contains) {
+				Query += key + "=" + value
+			} else {
+				Query += key + "=" + value + " AND "
+			}
+			i++
+		}
+	}
+	return Query
+}
+
+// Update sqlite3. SQLite UPDATE statement is used to  modify the existing records in a table. You can use WHERE clause with UPDATE query to update selected rows, otherwise all the rows would be updated.
+func (query *DatabaseQuery) Update() string {
+	Query := query.DatabaseOperation.String() + " " + query.TableName + " SET "
+	i := 0
+	for key, value := range query.Set {
+		if i < len(query.Set) {
+			Query += key + "=" + value
+		} else {
+			Query += key + "=" + value + " AND "
+		}
+		i++
+	}
+	Query += " WHERE "
+	i = 0
+	for key, value := range query.Contains {
+		if i < len(query.Contains) {
+			Query += key + "=" + value
+		} else {
+			Query += key + "=" + value + " AND "
+		}
+		i++
+	}
+	return Query
+}
+
+// Delete sqlite3. SQLite DELETE statement is used to delete  the existing records from a table. You can use WHERE clause with DELETE query to delete the selected rows, otherwise all the records would be deleted.
+func (query *DatabaseQuery) Delete() string {
+	Query := query.DatabaseOperation.String() + " FROM " + query.TableName + " WHERE "
+	i := 0
+	for key, value := range query.Contains {
+		if i < len(query.Contains) {
+			Query += key + "=" + value
+		} else {
+			Query += key + "=" + value + " AND "
+		}
+		i++
+	}
+	return Query
+}
+
+// LoadResultIntoMap Loads the result of a database query into a map.
 func (query *DatabaseQuery) LoadResultIntoMap(rows *sql.Rows) error {
 	var columns []string
 	columns, err := rows.Columns()
@@ -668,19 +759,13 @@ func (query *DatabaseQuery) LoadResultIntoMap(rows *sql.Rows) error {
 		// Append to the final results slice
 		query.Result = append(query.Result, row)
 	}
-
 	fmt.Println(query.Result) // You can then json.Marshal or w/e
-
-	// If you want it pretty-printed
-	r, err := json.MarshalIndent(query.Result, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(r))
 	return nil
 }
 
-func (server *Server) generateRoutes(app *fiber.App) {
+// GenerateRoute ..
+func (route *Route) GenerateRoute(app *fiber.App) {
+	app.Get(route.Path, func(c *fiber.Ctx) {})
 }
 
 // < ----- Helpers ----- >

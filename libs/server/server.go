@@ -475,41 +475,21 @@ func (server *Server) GetPdfByHash(Username string, hash string) PDF {
 
 // < ----- Extension Generators ----- >
 
-//Extension ..
+//Extension descripes the structure of an extension.
 type Extension struct {
 	Name           string          `json:"Name"`
-	Routes         []Route         `json:"Routes"`
+	Views          []View          `json:"Views"`
 	DatabaseTables []DatabaseTable `json:"DatabaseTable"`
 }
 
-// Route ..
-type Route struct {
+// View descripes the structure of an view.
+type View struct {
 	Path               string        `json:"Path"`               // The path the view will be rendered to.
 	View               string        `json:"View"`               // The view name. Will be used to select the correct view to render.
 	NeedsQuerying      bool          `json:"needsQuerying"`      // The flag to enable querying
 	QueryVariableNames []string      `json:"QueryVariableNames"` // Contains a a list of variable names used in the DatabaseQuery if it is set.
 	DatabaseQuery      DatabaseQuery `json:"DatabaseQueries"`    // The result will be passed to the tempalte generator.
 }
-
-// RouteMethod defines the allowed HTTP methods.
-type RouteMethod string
-
-func (method *RouteMethod) String() string {
-	switch *method {
-	case GET:
-		return "GET"
-	case POST:
-		return "POST"
-	}
-	return ""
-}
-
-const (
-	// GET HTTP. The GET Method is used to request data from a specified resource.
-	GET RouteMethod = "GET"
-	// POST HTTP. The POST Method is used to send data to a server to create/update a resource.
-	POST RouteMethod = "POST"
-)
 
 // DatabaseItemType Defines the allowed types of values for the database.
 type DatabaseItemType string
@@ -575,7 +555,7 @@ const (
 // This is made so that a the database item name can be mapped to it's type.
 type DatabaseItems map[string]DatabaseItemType
 
-//DatabaseTable ..
+//DatabaseTable Descripes the structure of a database table.
 type DatabaseTable struct {
 	TableName string        `json:"TableName"`
 	Items     DatabaseItems `json:"Items"`
@@ -763,9 +743,9 @@ func (query *DatabaseQuery) LoadResultIntoMap(rows *sql.Rows) error {
 	return nil
 }
 
-// GenerateRoute ..
-func (route *Route) GenerateRoute(app *fiber.App) {
-	app.Get(route.Path, func(c *fiber.Ctx) {})
+// GenerateRoute ge
+func (view *View) GenerateRoute(app *fiber.App) {
+	app.Get(view.Path, func(c *fiber.Ctx) {})
 }
 
 // < ----- Helpers ----- >

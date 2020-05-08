@@ -485,10 +485,37 @@ type Extension struct {
 // View descripes the structure of an view.
 type View struct {
 	Path               string        `json:"Path"`               // The path the view will be rendered to.
-	View               string        `json:"View"`               // The view name. Will be used to select the correct view to render.
+	ViewPath           string        `json:"ViewPath"`           // The view name. Will be used to select the correct view to render.
 	NeedsQuerying      bool          `json:"needsQuerying"`      // The flag to enable querying
 	QueryVariableNames []string      `json:"QueryVariableNames"` // Contains a a list of variable names used in the DatabaseQuery if it is set.
 	DatabaseQuery      DatabaseQuery `json:"DatabaseQueries"`    // The result will be passed to the tempalte generator.
+}
+
+// GenerateView generates a view based on the view structure.
+func (view *View) GenerateView(app *fiber.App, DB *sql.DB) {
+	app.Get(view.Path, func(c *fiber.Ctx) {
+		// Get current user information from the claims map.
+		bind := fiber.Map{}
+		user := c.Locals("user").(*jwt.Token)
+		claims := user.Claims.(jwt.MapClaims)
+		bind = fiber.Map{
+			"username":       claims["username"].(string),
+			"profilepicture": claims["profilepicture"].(string),
+		}
+		if view.NeedsQuerying {
+			for _, variable := range view.QueryVariableNames {
+				view.DatabaseQuery.Contains[variable] = c.Query(variable)
+			}
+			result, err := view.DatabaseQuery.GenerateQuery(DB)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			bind[view.DatabaseQuery.TableName] = result
+		}
+		if err := c.Render(view.ViewPath, bind); err != nil {
+			c.Status(500).Send(err.Error())
+		}
+	})
 }
 
 // DatabaseItemType Defines the allowed types of values for the database.
@@ -741,11 +768,6 @@ func (query *DatabaseQuery) LoadResultIntoMap(rows *sql.Rows) error {
 	}
 	fmt.Println(query.Result) // You can then json.Marshal or w/e
 	return nil
-}
-
-// GenerateRoute ge
-func (view *View) GenerateRoute(app *fiber.App) {
-	app.Get(view.Path, func(c *fiber.Ctx) {})
 }
 
 // < ----- Helpers ----- >

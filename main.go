@@ -177,39 +177,45 @@ func configTest() {
 	config := `
 	{
 		"Name":"PDFReader",
-		"Routes":{
+		"Views":{
 				"updatePageCount": {
 					"Path":"/updatePageCount",
-					"Methode":"POST",
-					"View":"",
-					"FormValueNames": [],
-					"ParameterNames": [],
-					"DatabaseQueries": []
+					"ViewPath":"",
+					"NeedsQuerying":false,
+					"QueryVariableNames":  ["Hash", "Username"],
+					"DatabaseQuery": {
+							"Result":{
+								
+							},
+							"Contains":{
+								"Hash":"Hash",
+								"Username":"Username"
+							},
+							"Set":{
+								"Page":"PageNumber"
+							},
+							"TableName":"PDFS",
+							"DatabaseOperation":"UPDATE"
+					}
 				},
 				"getPDF":{
 					"Path":"/GetPdfByHash",
-					"Methode":"POST",
-					"View":"",
-					"FormValueNames": [],
-					"ParameterNames": ["HASH"],
-					"DatabaseQueries": []
-				},
-		},
-		"DatabaseQueries":{
-			"UpdatePageCount":{
-				"Result":{
-
-				},
-				"Contains":{
-					"Hash":"Hash",
-					"Username":"Hash"
-				},
-				"Set":{
-					"Page":"PageNumber"
-				},
-				"TableName":"PDFS",
-				"DatabaseOperation":"UPDATE"
-			}
+					"ViewPath":"",
+					"NeedsQuerying":true,
+					"QueryVariableNames": ["Hash", "Username"],
+					"DatabaseQuery": {
+						"Result":{
+							
+						},
+						"Contains":
+							"Hash":"Hash",
+							"Username":"Username"
+						},
+						"Set":{},
+						"TableName":"PDFS",
+						"DatabaseOperation":"SELECT"
+					}
+				}
 		},
 		"DatabaseTables":{
 			"PDFS":{
@@ -227,58 +233,99 @@ func configTest() {
 	if err != nil {
 		panic(err)
 	}
-	dumpMap("", jsonMap)
+	Extension := InterfaceToExtension("", jsonMap)
+	fmt.Println(Extension)
 }
 
-func dumpMap(space string, m map[string]interface{}) {
+// InterfaceToExtension converts an interface to the Extension structure.
+func InterfaceToExtension(space string, m map[string]interface{}) Server.Extension {
 	var Extension Server.Extension
 	for k, v := range m {
 		if k == "Name" {
 			Extension.Name = v.(string)
-		}
-		if k == "Routes" {
+		} else if k == "Views" {
 			//v.(map[string]interface{}
-			var Routes []Server.Route
+			var Views []Server.View
 			if mv, ok := v.(map[string]interface{}); ok {
 				for _, v := range mv {
 					if mv2, ok := v.(map[string]interface{}); ok {
-						Routes = append(Routes, dumpRoute(mv2))
+						Views = append(Views, InterfaceToView(mv2))
 					}
 				}
-				Extension.Routes = Routes
+				Extension.Views = Views
 			}
-		}
-		if k == "DatabaseQueries" {
+		} else if k == "DatabaseTables" {
 			//v.(map[string]interface{}
-			var DatabaseQueries []Server.DatabaseQuery
+			var DatabaseQueries []Server.DatabaseTable
 			if mv, ok := v.(map[string]interface{}); ok {
 				for _, v := range mv {
 					if mv2, ok := v.(map[string]interface{}); ok {
-						DatabaseQueries = append(DatabaseQueries, dumpDatabaseQuery(mv2))
+						DatabaseQueries = append(DatabaseQueries, InterfaceToTable(mv2))
 					}
 				}
-				//Extension = DatabaseQueries
+				Extension.DatabaseTables = DatabaseQueries
 			}
 		}
 	}
+	return Extension
 }
 
-func dumpRoute(m map[string]interface{}) Server.Route {
-	var Route Server.Route
+// InterfaceToView converts an interface to the View structure.
+func InterfaceToView(m map[string]interface{}) Server.View {
+	var View Server.View
 	for k, v := range m {
-		fmt.Println("key: ", k, "value: ", v)
 		switch k {
 		case "Path":
-			Route.Path = v.(string)
-		case "View":
-			Route.View = v.(string)
+			View.Path = v.(string)
+		case "ViewPath":
+			View.ViewPath = v.(string)
+		case "NeedsQuerying":
+			View.NeedsQuerying = v.(bool)
+		case "QueryVariableNames":
+			/*fmt.Println("QueryVariableNames", v.(map[string]interface{}))
+			for kk, vv := range v.(map[string]interface{}) {
+				fmt.Println("Key", kk, "Value", vv)
+			}*/
+			xType := fmt.Sprintf("%T", v)
+			fmt.Println(xType)
+			//View.QueryVariableNames = v.([]string)
 		case "DatabaseQueries":
-			Route.DatabaseQueries = v.([]Server.DatabaseQuery)
+			if mv, ok := v.(map[string]interface{}); ok {
+				View.DatabaseQuery = InterfaceToQuery(mv)
+			}
 		}
 	}
-	return Route
+	return View
 }
 
-func dumpDatabaseQuery(m map[string]interface{}) Server.DatabaseQuery {
-	return Server.DatabaseQuery{}
+// InterfaceToQuery converts an interface to the DatabaseQuery structure.
+func InterfaceToQuery(m map[string]interface{}) Server.DatabaseQuery {
+	var Query Server.DatabaseQuery
+	for k, v := range m {
+		switch k {
+		case "Contains":
+			Query.Contains = v.(map[string]string)
+		case "Set":
+			Query.Set = v.(map[string]string)
+		case "TableName":
+			Query.TableName = v.(string)
+		case "DatabaseOperation":
+			Query.DatabaseOperation = v.(Server.DatabaseOperationType)
+		}
+	}
+	return Query
+}
+
+// InterfaceToTable converts an interface to the DatabaseTable structure.
+func InterfaceToTable(m map[string]interface{}) Server.DatabaseTable {
+	var DatabaseTable Server.DatabaseTable
+	for k, v := range m {
+		switch k {
+		case "TableName":
+			DatabaseTable.TableName = v.(string)
+		case "Items":
+			DatabaseTable.Items = v.(Server.DatabaseItems)
+		}
+	}
+	return DatabaseTable
 }

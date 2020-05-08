@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -70,7 +72,8 @@ func main() {
 
 	app.Post("/updateSetting", server.UpdateSetting)
 	app.Post("/pdf-update", server.PdfUpdate)
-
+	// < ----- TEST ----- >
+	test(server.DB)
 	// start the server on the server.port
 	log.Fatal(app.Listen(server.Port))
 }
@@ -93,6 +96,7 @@ func flags(server *Server.Server) {
 // < ----- Random Generators ----- >
 const charset = "abcdefghijklmnopqrstuvwxyz" +
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+const charset2 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 var seededRand *rand.Rand = rand.New(
 	rand.NewSource(time.Now().UnixNano()))
@@ -103,4 +107,26 @@ func stringWithCharset(length int, charset string) string {
 		b[i] = charset[seededRand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+func test(DB *sql.DB) {
+	dataBaseItems := Server.DatabaseItems{}
+	for i := 0; i < 100; i++ {
+		dataBaseItems[stringWithCharset(5, charset2)] = Server.TEXT
+	}
+	dataBaseTable := Server.DatabaseTable{TableName: "TestTable", Items: dataBaseItems}
+	err := dataBaseTable.GenerateTable(DB)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	DatabaseQuery := Server.DatabaseQuery{TableName: "PDFS", DatabaseOperation: Server.INSERT, Contains: make(map[string]string)}
+	DatabaseQuery.Contains["Username"] = "\"LowkeyCoding\""
+	DatabaseQuery.Contains["Hash"] = "\"somehash\""
+	DatabaseQuery.Contains["Path"] = "\"/test\""
+	DatabaseQuery.Contains["Page"] = "1"
+	err = DatabaseQuery.Query(DB)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 }

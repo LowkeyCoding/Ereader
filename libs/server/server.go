@@ -2,6 +2,7 @@ package server
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -460,6 +461,227 @@ func (server *Server) GetPdfByHash(Username string, hash string) PDF {
 }
 
 // < ----- PDF EXTENSION DB STOP ----- >
+
+// < ----- Extension Generators ----- >
+
+//Extension ..
+type Extension struct {
+	Routes          []Route
+	DatabaseQueries []DatabaseQuery
+	DatabaseTables  []DatabaseTable
+	Structs         map[string][]map[string]interface{}
+}
+
+// Route ..
+type Route struct {
+	Path            string          // The path the view will be rendered to.
+	View            string          // The view name. Will be used to select the correct view to render.
+	FormValueNames  []string        // The result will be passed to the tempalte generator or the database queries depending on the config.
+	ParameterNames  []string        // The result will be passed to the tempalte generator or the database queries depending on the config.
+	DatabaseQueries []DatabaseQuery // The result will be passed to the tempalte generator.
+	config          string          // well dunno how the config is gonna work yet...
+}
+
+// DatabaseItemType Defines the allowed types of values for the database.
+type DatabaseItemType string
+
+func (itemType *DatabaseItemType) String() string {
+	switch *itemType {
+	case NULL:
+		return "NULL"
+	case INTEGER:
+		return "INTEGER"
+	case REAL:
+		return "REAL"
+	case TEXT:
+		return "TEXT"
+	case BLOB:
+		return "BLOB"
+	}
+	return ""
+}
+
+const (
+	// NULL Sqlite3. The value is a NULL value
+	NULL DatabaseItemType = "NULL"
+	// INTEGER Sqlite3. The value is a signed integer, stored in 1, 2, 3, 4, 6, or 8 bytes depending on the magnitude of the value.
+	INTEGER DatabaseItemType = "INTEGER"
+	// REAL Sqlite3. The value is a floating point value, stored as an 8-byte IEEE floating point number.
+	REAL DatabaseItemType = "REAL"
+	// TEXT Sqlite3. The value is a text string, stored using the database encoding (UTF-8, UTF-16BE or UTF-16LE).
+	TEXT DatabaseItemType = "TEXT"
+	// BLOB Sqlite3. The value is a blob of data, stored exactly as it was input.
+	BLOB DatabaseItemType = "BLOB"
+)
+
+// DatabaseOperationType Defines the operation types for the database.
+type DatabaseOperationType string
+
+func (operationType *DatabaseOperationType) String() string {
+	switch *operationType {
+	case INSERT:
+		return "INSERT"
+	case SELECT:
+		return "SELECT"
+	case UPDATE:
+		return "UPDATE"
+	case DELETE:
+		return "DELETE"
+	}
+	return ""
+}
+
+const (
+	// INSERT sqlite3. SQLite INSERT INTO Statement is used to add new rows of data into a table in the database.
+	INSERT DatabaseOperationType = "INSERT"
+	// SELECT sqlite3. SQLite SELECT statement is used to fetch the data from a SQLite database table which returns data in the form of a result table.
+	SELECT DatabaseOperationType = "SELECT"
+	// UPDATE sqlite3. SQLite UPDATE statement is used to  modify the existing records in a table. You can use WHERE clause with UPDATE query to update selected rows, otherwise all the rows would be updated.
+	UPDATE DatabaseOperationType = "UPDATE"
+	// DELETE statement is used to delete  the existing records from a table. You can use WHERE clause with DELETE query to delete the selected rows, otherwise all the records would be deleted.
+	DELETE DatabaseOperationType = "DELETE"
+)
+
+// DatabaseItems is a the item insertet into the database table.
+// This is made so that a the database item name can be mapped to it's type.
+type DatabaseItems map[string]DatabaseItemType
+
+//DatabaseTable ..
+type DatabaseTable struct {
+	TableName string
+	Items     DatabaseItems
+}
+
+// GenerateTable generates the given database table if it doesn't exist'.
+func (database *DatabaseTable) GenerateTable(DB *sql.DB) error {
+	// Setup the FileSettings table if it doesn't exist'
+	Query := "CREATE TABLE IF NOT EXISTS " + database.TableName + "("
+	Query += "ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT"
+	i := 0
+	for key, sqlType := range database.Items {
+		if i < len(database.Items) {
+			Query += ", " + key + " " + sqlType.String()
+		} else {
+			Query += ", " + key + " " + sqlType.String()
+		}
+		i++
+	}
+	Query += ");"
+	statement, err := DB.Prepare(Query)
+	if err != nil {
+		return err
+	}
+	statement.Exec()
+	return nil
+}
+
+//DatabaseQuery ..
+type DatabaseQuery struct {
+	Result            []map[string]interface{}
+	Contains          map[string]string
+	TableName         string
+	DatabaseOperation DatabaseOperationType
+}
+
+// Query constructs the query based on the information provided from the DatabaseQuery
+func (query *DatabaseQuery) Query(DB *sql.DB) error {
+	Query := ""
+	i := 0
+	switch query.DatabaseOperation {
+	case INSERT:
+		//INSERT INTO PDFS (Username, Hash, Path, Page) values (?,?,?,?)
+		Query = query.DatabaseOperation.String() + " INTO " + query.TableName + " ("
+		keyMap := make(map[int]string)
+		i = 0
+		for key := range query.Contains {
+			keyMap[i] = key
+			if i < len(query.Contains)-1 {
+				Query += key + ","
+			} else {
+				Query += key + ")"
+			}
+			i++
+		}
+		Query += " VALUES ("
+		for j := 0; j < i; j++ {
+			if j < i-1 {
+				Query += query.Contains[keyMap[j]] + ","
+			} else {
+				Query += query.Contains[keyMap[j]] + ")"
+			}
+		}
+
+	case SELECT:
+		// SELECT * FROM PDFS WHERE Username=$1 AND Hash=$2
+		Query = query.DatabaseOperation.String() + " * FROM " + query.TableName
+		i = 0
+		if len(query.Contains) > 0 {
+			Query += " WHERE "
+			for key, value := range query.Contains {
+				if i < len(query.Contains) {
+					Query += key + "=" + value
+				} else {
+					Query += key + "=" + value + " AND "
+				}
+				i++
+			}
+		}
+	}
+	fmt.Println("Query: ", Query)
+	rows, err := DB.Query(Query)
+	if err != nil {
+		return err
+	}
+	query.LoadResultIntoMap(rows)
+	return nil
+}
+
+// LoadResultIntoMap ..
+func (query *DatabaseQuery) LoadResultIntoMap(rows *sql.Rows) error {
+	var columns []string
+	columns, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	colNum := len(columns)
+
+	for rows.Next() {
+		// Prepare to read row using Scan
+		r := make([]interface{}, colNum)
+		for i := range r {
+			r[i] = &r[i]
+		}
+
+		// Read rows using Scan
+		err = rows.Scan(r...)
+		if err != nil {
+			return err
+		}
+
+		// Create a row map to store row's data
+		var row = map[string]interface{}{}
+		for i := range r {
+			row[columns[i]] = r[i]
+		}
+
+		// Append to the final results slice
+		query.Result = append(query.Result, row)
+	}
+
+	fmt.Println(query.Result) // You can then json.Marshal or w/e
+
+	// If you want it pretty-printed
+	r, err := json.MarshalIndent(query.Result, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(r))
+	return nil
+}
+
+func (server *Server) generateRoutes(app *fiber.App) {
+}
 
 // < ----- Helpers ----- >
 func deleteEmpty(s []string) []string {

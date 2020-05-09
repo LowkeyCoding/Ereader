@@ -3,3 +3,4 @@
 *.db
 database.db
 /files
+/.vs

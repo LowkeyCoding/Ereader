@@ -1,0 +1,46 @@
+doctype html
+head
+  meta[charset="UTF-8"]
+  meta[name="viewport"][content="width=device-width"][initial-scale="1.0"]
+  link[rel="stylesheet"][href="./css/pdf-viewer.css"]
+  script[src="https://kit.fontawesome.com/74596594bf.js"][crossorigin="anonymous"]
+  title PDF Viewer
+body
+    div#container.container
+        div#useroverlay.shadow.rounded
+            if username
+                if profilepicture
+                    p
+                        | Welcome 
+                        a#name[name="username"]#{username}
+                        img.circular[src=profilepicture][name="icon"][height=32][width=32][placeholder="icon"]
+                else
+                    p
+                        | Welcome 
+                        a#name[name="username"]#{username}
+                        img.circular[src="https://via.placeholder.com/128/5db3ad/ffffff/?text=?"][name="icon"][height=32][width=32][placeholder="icon"]
+            else
+                p
+                    | Welcome 
+                    a#name[name="username"]User
+                    img.circular[src="https://via.placeholder.com/128/5db3ad/ffffff/?text=?"][name="icon"][height=32][width=32][placeholder="icon"]
+            p
+                | Page 
+                a#currentPage
+                |  of 
+                a#totalPages
+        canvas#pdf-render
+        script
+            let PDF = {
+                url:                "/volume/#{Path}",
+                path:               "#{Path}",
+                user:               "#{username}",
+                doc:                null,
+                hash:               "#{Hash}",
+                scale:              2,
+                pageNum:            #{Page},
+                pageIsRendering:    false,
+                pageNumIsPending:   null
+            }
+    script[src="https://mozilla.github.io/pdf.js/build/pdf.js"]
+    script[src="js/main2.js"]

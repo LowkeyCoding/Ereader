@@ -41,12 +41,17 @@ func (view *View) GenerateView(app *fiber.App, DB *sql.DB) {
 		if view.NeedsQuerying {
 			for _, variable := range view.QueryVariableNames {
 				view.DatabaseQuery.Contains[variable] = c.Query(variable)
+				fmt.Println(variable + ": " + view.DatabaseQuery.Contains[variable])
 			}
-			result, err := view.DatabaseQuery.GenerateQuery(DB)
+			_, err := view.DatabaseQuery.GenerateQuery(DB)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
-			bind[view.DatabaseQuery.TableName] = result
+			for k := range view.DatabaseQuery.Result {
+				for key, value := range view.DatabaseQuery.Result[k] {
+					bind[key] = value
+				}
+			}
 		}
 		if err := c.Render(view.ViewPath, bind); err != nil {
 			c.Status(500).Send(err.Error())
@@ -149,16 +154,18 @@ func (database *DatabaseTable) GenerateTable(DB *sql.DB) error {
 
 //DatabaseQuery the structure that containse teh data representation of a database query.
 type DatabaseQuery struct {
-	Result            []map[string]interface{} `json:"Result"`
-	Contains          map[string]string        `json:"Contains"`
-	Set               map[string]string        `json:"Set"`
-	TableName         string                   `json:"TableName"`
-	DatabaseOperation DatabaseOperationType    `json:"DatabaseOperation"`
+	Result            []map[string]interface{}    `json:"Result"`
+	VariableType      map[string]DatabaseItemType `json:"VariableType"`
+	Contains          map[string]string           `json:"Contains"`
+	Set               map[string]string           `json:"Set"`
+	TableName         string                      `json:"TableName"`
+	DatabaseOperation DatabaseOperationType       `json:"DatabaseOperation"`
 }
 
 // GenerateQuery constructs the query based on the information provided from the DatabaseQuery
 func (query *DatabaseQuery) GenerateQuery(DB *sql.DB) (string, error) {
 	Query := ""
+	query.TypeCorretor()
 	switch query.DatabaseOperation {
 	case INSERT:
 		Query = query.Insert()
@@ -185,6 +192,20 @@ func (query *DatabaseQuery) GenerateQuery(DB *sql.DB) (string, error) {
 	}
 	resultJSON := string(resultJSONBYTE)
 	return resultJSON, nil
+}
+
+// TypeCorretor insures that items have the correct type.
+func (query *DatabaseQuery) TypeCorretor() {
+	for key, value := range query.Contains {
+		if query.VariableType[key] == TEXT {
+			query.Contains[key] = "\"" + value + "\""
+		}
+	}
+	for key, value := range query.Set {
+		if query.VariableType[key] == TEXT {
+			query.Set[key] = "\"" + value + "\""
+		}
+	}
 }
 
 // Insert sqlite3. SQLite INSERT INTO Statement is used to add new rows of data into a table in the database.
@@ -219,10 +240,10 @@ func (query *DatabaseQuery) Select() string {
 	if len(query.Contains) > 0 {
 		Query += " WHERE "
 		for key, value := range query.Contains {
-			if i < len(query.Contains) {
-				Query += key + "=" + value
-			} else {
+			if i < len(query.Contains)-1 {
 				Query += key + "=" + value + " AND "
+			} else {
+				Query += key + "=" + value
 			}
 			i++
 		}
@@ -235,20 +256,20 @@ func (query *DatabaseQuery) Update() string {
 	Query := query.DatabaseOperation.String() + " " + query.TableName + " SET "
 	i := 0
 	for key, value := range query.Set {
-		if i < len(query.Set) {
-			Query += key + "=" + value
-		} else {
+		if i < len(query.Set)-1 {
 			Query += key + "=" + value + " AND "
+		} else {
+			Query += key + "=" + value
 		}
 		i++
 	}
 	Query += " WHERE "
 	i = 0
 	for key, value := range query.Contains {
-		if i < len(query.Contains) {
-			Query += key + "=" + value
-		} else {
+		if i < len(query.Contains)-1 {
 			Query += key + "=" + value + " AND "
+		} else {
+			Query += key + "=" + value
 		}
 		i++
 	}
@@ -260,10 +281,10 @@ func (query *DatabaseQuery) Delete() string {
 	Query := query.DatabaseOperation.String() + " FROM " + query.TableName + " WHERE "
 	i := 0
 	for key, value := range query.Contains {
-		if i < len(query.Contains) {
-			Query += key + "=" + value
-		} else {
+		if i < len(query.Contains)-1 {
 			Query += key + "=" + value + " AND "
+		} else {
+			Query += key + "=" + value
 		}
 		i++
 	}

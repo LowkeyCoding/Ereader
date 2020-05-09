@@ -2,6 +2,7 @@ package server
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -110,12 +111,31 @@ func (server *Server) UpdateSetting(c *fiber.Ctx) {
 // Query is the path used by extension to query their database table.
 func (server *Server) Query(c *fiber.Ctx) {
 	var databaseQuery ExtensionAPI.DatabaseQuery
-	c.BodyParser(databaseQuery)
-	result, err := databaseQuery.GenerateQuery(server.DB)
+
+	databaseQuery.TableName = c.FormValue("Result")
+
+	var VariableType map[string]ExtensionAPI.DatabaseItemType
+	json.Unmarshal([]byte(c.FormValue("VariableType")), &VariableType)
+	databaseQuery.VariableType = VariableType
+
+	var Contains map[string]string
+	json.Unmarshal([]byte(c.FormValue("Contains")), &Contains)
+	databaseQuery.Contains = Contains
+
+	var Set map[string]string
+	json.Unmarshal([]byte(c.FormValue("Set")), &Set)
+	databaseQuery.Set = Set
+
+	databaseQuery.TableName = c.FormValue("TableName")
+
+	databaseQuery.DatabaseOperation = ExtensionAPI.DatabaseOperationType(c.FormValue("DatabaseOperation"))
+
+	fmt.Println(databaseQuery)
+	_, err := databaseQuery.GenerateQuery(server.DB)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	c.Send(result)
+	c.SendStatus(fiber.StatusOK)
 }
 
 // < ----- GET ROUTES ----- >

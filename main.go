@@ -115,7 +115,7 @@ func stringWithCharset(length int, charset string) string {
 }
 
 func test(DB *sql.DB, app *fiber.App) {
-	databaseTest(DB)
+	//databaseTest(DB)
 	viewTest(DB, app)
 	//configTest() // Fails since it's a hughe struggle
 }
@@ -191,7 +191,66 @@ func databaseTest(DB *sql.DB) {
 }
 
 func viewTest(DB *sql.DB, app *fiber.App) {
+	// Create the viewQueryVariableNames array
+	var viewQueryVariableNames []string
+	viewQueryVariableNames = append(viewQueryVariableNames, "Hash")
+	viewQueryVariableNames = append(viewQueryVariableNames, "Username")
+	// Set query Variables
+	var queryContains map[string]string
+	queryContains = make(map[string]string)
+	queryContains["Hash"] = ""
+	queryContains["Username"] = ""
+	// Set variable types
+	var VariableType map[string]ExtensionAPI.DatabaseItemType
+	VariableType = make(map[string]ExtensionAPI.DatabaseItemType)
+	VariableType["Hash"] = ExtensionAPI.TEXT
+	VariableType["Username"] = ExtensionAPI.TEXT
+	pdfReaderView := ExtensionAPI.View{
+		Path:               "/pdf",
+		ViewPath:           "./views/pdf.pug",
+		NeedsQuerying:      true,
+		QueryVariableNames: viewQueryVariableNames,
+		DatabaseQuery: ExtensionAPI.DatabaseQuery{
+			TableName:         "PDFS",
+			VariableType:      VariableType,
+			Contains:          queryContains,
+			DatabaseOperation: ExtensionAPI.SELECT,
+		},
+	}
+	var items ExtensionAPI.DatabaseItems
+	items = make(map[string]ExtensionAPI.DatabaseItemType)
 
+	items["ID"] = ExtensionAPI.INTEGER
+	items["Username"] = ExtensionAPI.TEXT
+	items["Hash"] = ExtensionAPI.TEXT
+	items["Path"] = ExtensionAPI.TEXT
+	items["Page"] = ExtensionAPI.INTEGER
+	databaseTable := ExtensionAPI.DatabaseTable{
+		TableName: "PDFS",
+		Items:     items,
+	}
+	// Add the view to a list of views
+	var pdfReaderViews []ExtensionAPI.View
+	pdfReaderViews = append(pdfReaderViews, pdfReaderView)
+	// Add the database table to a list of database tables
+	var pdfDatabaseTables []ExtensionAPI.DatabaseTable
+	pdfDatabaseTables = append(pdfDatabaseTables, databaseTable)
+	extension := ExtensionAPI.Extension{
+		Name:           "PDFREADER",
+		Views:          pdfReaderViews,
+		DatabaseTables: pdfDatabaseTables,
+	}
+	for _, databaseTable := range extension.DatabaseTables {
+		databaseTable.GenerateTable(DB)
+	}
+	for _, view := range extension.Views {
+		view.GenerateView(app, DB)
+	}
+	test, err := json.Marshal(&pdfReaderView)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(string(test))
 }
 
 func configTest() {
@@ -255,7 +314,7 @@ func configTest() {
 		panic(err)
 	}
 	Extension := InterfaceToExtension("", jsonMap)
-	fmt.Println(Extension)
+	fmt.Println("Extension: ", Extension)
 }
 
 // InterfaceToExtension converts an interface to the Extension structure.
@@ -316,6 +375,7 @@ func InterfaceToView(m map[string]interface{}) ExtensionAPI.View {
 			}
 		}
 	}
+	fmt.Println("View: ", View)
 	return View
 }
 
@@ -334,6 +394,7 @@ func InterfaceToQuery(m map[string]interface{}) ExtensionAPI.DatabaseQuery {
 			Query.DatabaseOperation = v.(ExtensionAPI.DatabaseOperationType)
 		}
 	}
+	fmt.Println("Query: ", Query)
 	return Query
 }
 
@@ -348,5 +409,6 @@ func InterfaceToTable(m map[string]interface{}) ExtensionAPI.DatabaseTable {
 			DatabaseTable.Items = v.(ExtensionAPI.DatabaseItems)
 		}
 	}
+	fmt.Println("DatabaseTable: ", DatabaseTable)
 	return DatabaseTable
 }

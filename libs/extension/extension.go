@@ -35,7 +35,6 @@ func (extension *Extension) LoadExtension() {
 	extension.Name = Extension.Name
 	extension.Views = Extension.Views
 	extension.DatabaseTables = Extension.DatabaseTables
-	fmt.Println("Extension: ", extension)
 }
 
 // GenerateStaticPaths generates paths for the css and js files to be served.

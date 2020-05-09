@@ -29,6 +29,7 @@ type File struct {
 // Files is a array of containing multiple instances of file.
 type Files []File
 
+// AddFileSetting adds a file setting to the file
 func (files Files) AddFileSetting(settingsMap map[string]FileSetting, IconsList map[string]bool) Files {
 	for i := range files {
 		files[i].FileSetting = settingsMap[files[i].Extension]
@@ -43,6 +44,7 @@ func (files Files) AddFileSetting(settingsMap map[string]FileSetting, IconsList 
 	return files
 }
 
+// ToJSON converts a given file to JSON
 func (files *Files) ToJSON() (string, error) {
 	b, err := json.Marshal(&files)
 	if err != nil {

@@ -18,8 +18,14 @@ type Extension struct {
 	DatabaseTables []DatabaseTable `json:"DatabaseTable"`
 }
 
-// LoadExtension loads a given extension.
-func (extension *Extension) LoadExtension() error {
+// setup generates the database tables and views.
+func (extension *Extension) setup(app *fiber.App, DB *sql.DB) error {
+	for _, databaseTable := range extension.DatabaseTables {
+		databaseTable.GenerateTable(DB)
+	}
+	for _, view := range extension.Views {
+		view.GenerateView(app, DB)
+	}
 	return nil
 }
 

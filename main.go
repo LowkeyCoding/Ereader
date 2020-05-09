@@ -116,8 +116,8 @@ func stringWithCharset(length int, charset string) string {
 
 func test(DB *sql.DB, app *fiber.App) {
 	//databaseTest(DB)
-	viewTest(DB, app)
-	//configTest() // Fails since it's a hughe struggle
+	//viewTest(DB, app)
+	configTest() // Fails since it's a hughe struggle
 }
 
 func databaseTest(DB *sql.DB) {
@@ -257,44 +257,45 @@ func configTest() {
 	config := `
 	{
 		"Name": "PDFREADER",
-		"Views": [
-		  {
-			"Path": "/pdf",
-			"ViewPath": "./views/pdf.pug",
-			"needsQuerying": true,
-			"QueryVariableNames": [
-			  "Hash",
-			  "Username"
-			],
-			"DatabaseQuery": {
-			  "Result": null,
-			  "VariableType": {
-				"Hash": "TEXT",
-				"Username": "TEXT"
-			  },
-			  "Contains": {
-				"Hash": "",
-				"Username": ""
-			  },
-			  "Set": null,
-			  "TableName": "PDFS",
-			  "DatabaseOperation": "SELECT"
+		"Views":{
+			"View": {
+				"Path": "/pdf",
+				"ViewPath": "./views/pdf.pug",
+				"NeedsQuerying": true,
+				"QueryVariableNames": [
+				  "Hash",
+				  "Username"
+				],
+				"DatabaseQuery": {
+				  "Result": null,
+				  "VariableType": {
+					"Hash": "TEXT",
+					"Username": "TEXT"
+				  },
+				  "Contains": {
+					"Hash": "",
+					"Username": ""
+				  },
+				  "Set": {},
+				  "TableName": "PDFS",
+				  "DatabaseOperation": "SELECT"
+				}
 			}
-		  }
-		],
-		"DatabaseTable": [
-		  {
-			"TableName": "PDFS",
-			"Items": {
-			  "Hash": "TEXT",
-			  "ID": "INTEGER",
-			  "Page": "INTEGER",
-			  "Path": "TEXT",
-			  "Username": "TEXT"
+		},
+		"DatabaseTables": {
+			"DatabaseTable":{
+				"TableName": "PDFS",
+				"Items": {
+				  "Hash": "TEXT",
+				  "ID": "INTEGER",
+				  "Page": "INTEGER",
+				  "Path": "TEXT",
+				  "Username": "TEXT"
+				}
 			}
-		  }
-		]
-	  }
+		}
+	}
+		
 	`
 	jsonMap := make(map[string]interface{})
 	err := json.Unmarshal([]byte(config), &jsonMap)
@@ -302,7 +303,7 @@ func configTest() {
 		panic(err)
 	}
 	Extension := InterfaceToExtension("", jsonMap)
-	fmt.Println("Extension: ", Extension)
+	fmt.Println(Extension)
 }
 
 // InterfaceToExtension converts an interface to the Extension structure.
@@ -312,26 +313,20 @@ func InterfaceToExtension(space string, m map[string]interface{}) ExtensionAPI.E
 		if k == "Name" {
 			Extension.Name = v.(string)
 		} else if k == "Views" {
-			//v.(map[string]interface{}
 			var Views []ExtensionAPI.View
 			if mv, ok := v.(map[string]interface{}); ok {
 				for _, v := range mv {
-					if mv2, ok := v.(map[string]interface{}); ok {
-						Views = append(Views, InterfaceToView(mv2))
-					}
+					Views = append(Views, InterfaceToView(v.(map[string]interface{})))
 				}
-				Extension.Views = Views
 			}
+			Extension.Views = Views
 		} else if k == "DatabaseTables" {
-			//v.(map[string]interface{}
-			var DatabaseQueries []ExtensionAPI.DatabaseTable
+			var DatabaseTables []ExtensionAPI.DatabaseTable
 			if mv, ok := v.(map[string]interface{}); ok {
 				for _, v := range mv {
-					if mv2, ok := v.(map[string]interface{}); ok {
-						DatabaseQueries = append(DatabaseQueries, InterfaceToTable(mv2))
-					}
+					DatabaseTables = append(DatabaseTables, InterfaceToTable(v.(map[string]interface{})))
 				}
-				Extension.DatabaseTables = DatabaseQueries
+				Extension.DatabaseTables = DatabaseTables
 			}
 		}
 	}
@@ -350,20 +345,17 @@ func InterfaceToView(m map[string]interface{}) ExtensionAPI.View {
 		case "NeedsQuerying":
 			View.NeedsQuerying = v.(bool)
 		case "QueryVariableNames":
-			/*fmt.Println("QueryVariableNames", v.(map[string]interface{}))
-			for kk, vv := range v.(map[string]interface{}) {
-				fmt.Println("Key", kk, "Value", vv)
-			}*/
-			xType := fmt.Sprintf("%T", v)
-			fmt.Println(xType)
-			//View.QueryVariableNames = v.([]string)
-		case "DatabaseQueries":
+			var QueryVariableNames []string
+			for _, vv := range v.([]interface{}) {
+				QueryVariableNames = append(QueryVariableNames, vv.(string))
+			}
+			View.QueryVariableNames = QueryVariableNames
+		case "DatabaseQuery":
 			if mv, ok := v.(map[string]interface{}); ok {
 				View.DatabaseQuery = InterfaceToQuery(mv)
 			}
 		}
 	}
-	fmt.Println("View: ", View)
 	return View
 }
 
@@ -372,17 +364,32 @@ func InterfaceToQuery(m map[string]interface{}) ExtensionAPI.DatabaseQuery {
 	var Query ExtensionAPI.DatabaseQuery
 	for k, v := range m {
 		switch k {
+		case "VariableType":
+			VariableType := make(map[string]ExtensionAPI.DatabaseItemType)
+			for kk, vv := range v.(map[string]interface{}) {
+				VariableType[kk] = ExtensionAPI.DatabaseItemType(vv.(string))
+			}
+			Query.VariableType = VariableType
 		case "Contains":
-			Query.Contains = v.(map[string]string)
+			//Query.Contains = v.(map[string]interface{})
+			Contains := make(map[string]string)
+			for kk, vv := range v.(map[string]interface{}) {
+				Contains[kk] = vv.(string)
+			}
+			Query.Contains = Contains
+
 		case "Set":
-			Query.Set = v.(map[string]string)
+			Set := make(map[string]string)
+			for kk, vv := range v.(map[string]interface{}) {
+				Set[kk] = vv.(string)
+			}
+			Query.Set = Set
 		case "TableName":
 			Query.TableName = v.(string)
 		case "DatabaseOperation":
-			Query.DatabaseOperation = v.(ExtensionAPI.DatabaseOperationType)
+			Query.DatabaseOperation = ExtensionAPI.DatabaseOperationType(v.(string))
 		}
 	}
-	fmt.Println("Query: ", Query)
 	return Query
 }
 
@@ -394,9 +401,12 @@ func InterfaceToTable(m map[string]interface{}) ExtensionAPI.DatabaseTable {
 		case "TableName":
 			DatabaseTable.TableName = v.(string)
 		case "Items":
-			DatabaseTable.Items = v.(ExtensionAPI.DatabaseItems)
+			Items := make(map[string]ExtensionAPI.DatabaseItemType)
+			for kk, vv := range v.(map[string]interface{}) {
+				Items[kk] = ExtensionAPI.DatabaseItemType(vv.(string))
+			}
+			DatabaseTable.Items = Items
 		}
 	}
-	fmt.Println("DatabaseTable: ", DatabaseTable)
 	return DatabaseTable
 }

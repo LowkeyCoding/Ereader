@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber"
@@ -14,12 +15,38 @@ import (
 //Extension descripes the structure of an extension.
 type Extension struct {
 	Name           string          `json:"Name"`
+	Path           string          `json:"Path"`
 	Views          []View          `json:"Views"`
 	DatabaseTables []DatabaseTable `json:"DatabaseTable"`
 }
 
-// setup generates the database tables and views.
-func (extension *Extension) setup(app *fiber.App, DB *sql.DB) error {
+// LoadExtension loads the extension from the config file.
+func (extension *Extension) LoadExtension() {
+	jsonMap := make(map[string]interface{})
+	config, err := ioutil.ReadFile(extension.Path + "/config.json")
+	if err != nil {
+		fmt.Println("Invalid config: ", err.Error())
+	}
+	err = json.Unmarshal(config, &jsonMap)
+	if err != nil {
+		fmt.Println("Invalid config: ", err.Error())
+	}
+	Extension := extension.InterfaceToExtension("", jsonMap)
+	extension.Name = Extension.Name
+	extension.Views = Extension.Views
+	extension.DatabaseTables = Extension.DatabaseTables
+	fmt.Println("Extension: ", extension)
+}
+
+// GenerateStaticPaths generates paths for the css and js files to be served.
+func (extension Extension) GenerateStaticPaths(app *fiber.App) {
+	app.Static(extension.Name+"/css", extension.Path+"/css")
+	app.Static(extension.Name+"/js", extension.Path+"/js")
+}
+
+// Setup generates the database tables and views.
+func (extension *Extension) Setup(app *fiber.App, DB *sql.DB) error {
+	extension.GenerateStaticPaths(app)
 	for _, databaseTable := range extension.DatabaseTables {
 		databaseTable.GenerateTable(DB)
 	}
@@ -27,6 +54,131 @@ func (extension *Extension) setup(app *fiber.App, DB *sql.DB) error {
 		view.GenerateView(app, DB)
 	}
 	return nil
+}
+
+// InterfaceToExtension converts an interface to the Extension structure.
+func (extension *Extension) InterfaceToExtension(space string, m map[string]interface{}) Extension {
+	var Extension Extension
+	for k, v := range m {
+		if k == "Name" {
+			Extension.Name = v.(string)
+		} else if k == "Views" {
+			var Views []View
+			if mv, ok := v.(map[string]interface{}); ok {
+				for _, v := range mv {
+					Views = append(Views, extension.InterfaceToView(v.(map[string]interface{})))
+				}
+			}
+			Extension.Views = Views
+		} else if k == "DatabaseTables" {
+			var DatabaseTables []DatabaseTable
+			if mv, ok := v.(map[string]interface{}); ok {
+				for _, v := range mv {
+					DatabaseTables = append(DatabaseTables, extension.InterfaceToTable(v.(map[string]interface{})))
+				}
+				Extension.DatabaseTables = DatabaseTables
+			}
+		}
+	}
+	return Extension
+}
+
+// InterfaceToView converts an interface to the View structure.
+func (extension *Extension) InterfaceToView(m map[string]interface{}) View {
+	var View View
+	for k, v := range m {
+		switch k {
+		case "Path":
+			View.Path = v.(string)
+		case "ViewPath":
+			View.ViewPath = extension.Path + v.(string)
+		case "NeedsQuerying":
+			View.NeedsQuerying = v.(bool)
+		case "QueryVariableNames":
+			var QueryVariableNames []string
+			for _, vv := range v.([]interface{}) {
+				QueryVariableNames = append(QueryVariableNames, vv.(string))
+			}
+			View.QueryVariableNames = QueryVariableNames
+		case "DatabaseQuery":
+			if mv, ok := v.(map[string]interface{}); ok {
+				View.DatabaseQuery = extension.InterfaceToQuery(mv)
+			}
+		}
+	}
+	return View
+}
+
+// InterfaceToQuery converts an interface to the DatabaseQuery structure.
+func (extension *Extension) InterfaceToQuery(m map[string]interface{}) DatabaseQuery {
+	var Query DatabaseQuery
+	for k, v := range m {
+		switch k {
+		case "VariableType":
+			VariableType := make(map[string]DatabaseItemType)
+			for kk, vv := range v.(map[string]interface{}) {
+				VariableType[kk] = DatabaseItemType(vv.(string))
+			}
+			Query.VariableType = VariableType
+		case "Contains":
+			//Query.Contains = v.(map[string]interface{})
+			Contains := make(map[string]string)
+			for kk, vv := range v.(map[string]interface{}) {
+				Contains[kk] = vv.(string)
+			}
+			Query.Contains = Contains
+
+		case "Set":
+			Set := make(map[string]string)
+			for kk, vv := range v.(map[string]interface{}) {
+				Set[kk] = vv.(string)
+			}
+			Query.Set = Set
+		case "TableName":
+			Query.TableName = v.(string)
+		case "DatabaseOperation":
+			Query.DatabaseOperation = DatabaseOperationType(v.(string))
+		}
+	}
+	return Query
+}
+
+// InterfaceToTable converts an interface to the DatabaseTable structure.
+func (extension *Extension) InterfaceToTable(m map[string]interface{}) DatabaseTable {
+	var DatabaseTable DatabaseTable
+	for k, v := range m {
+		switch k {
+		case "TableName":
+			DatabaseTable.TableName = v.(string)
+		case "Items":
+			Items := make(map[string]DatabaseItemType)
+			for kk, vv := range v.(map[string]interface{}) {
+				Items[kk] = DatabaseItemType(vv.(string))
+			}
+			DatabaseTable.Items = Items
+		}
+	}
+	return DatabaseTable
+}
+
+// Extensions is a array of containing multiple instances of Extension.
+type Extensions []Extension
+
+// LoadExtensions loads all extensions from the extensions folder.
+func (extensions *Extensions) LoadExtensions(app *fiber.App, DB *sql.DB) {
+	files, err := ioutil.ReadDir("./Extensions")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			Extension := Extension{Path: "./Extensions/" + file.Name()}
+			Extension.LoadExtension()
+			Extension.Setup(app, DB)
+			*extensions = append(*extensions, Extension)
+		}
+	}
 }
 
 // View descripes the structure of an view.

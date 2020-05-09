@@ -1,0 +1,40 @@
+{
+    "Name": "PDFREADER",
+    "Views":{
+        "View": {
+            "Path": "/pdf",
+            "ViewPath": "/views/pdf.pug",
+            "NeedsQuerying": true,
+            "QueryVariableNames": [
+              "Hash",
+              "Username"
+            ],
+            "DatabaseQuery": {
+              "Result": null,
+              "VariableType": {
+                "Hash": "TEXT",
+                "Username": "TEXT"
+              },
+              "Contains": {
+                "Hash": "",
+                "Username": ""
+              },
+              "Set": {},
+              "TableName": "PDFS",
+              "DatabaseOperation": "SELECT"
+            }
+        }
+    },
+    "DatabaseTables": {
+        "DatabaseTable":{
+            "TableName": "PDFS",
+            "Items": {
+              "Hash": "TEXT",
+              "ID": "INTEGER",
+              "Page": "INTEGER",
+              "Path": "TEXT",
+              "Username": "TEXT"
+            }
+        }
+    }
+}

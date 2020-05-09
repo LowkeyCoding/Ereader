@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,17 +24,6 @@ type User struct {
 	Password       string             `json:"Password"`
 	ProfilePicture string             `json:"ProfilePicture"`
 	FileSettings   Files.FileSettings `json:"FileSettings"`
-}
-
-// < ----- PDF ----- >
-
-// PDF is a struct representing a pdf in the database
-type PDF struct {
-	ID       string
-	Username string
-	Hash     string
-	Path     string
-	Page     int
 }
 
 // < ----- Server ----- >
@@ -221,59 +209,6 @@ func (server *Server) Settings(c *fiber.Ctx) {
 	}
 }
 
-// < ----- PDF EXTENSION ROUTE START ----- >
-
-// PdfViewer servers the page that renders the pdf.
-func (server *Server) PdfViewer(c *fiber.Ctx) {
-	// Get current user information from the claims map.
-	user := c.Locals("user").(*jwt.Token)
-	claims := user.Claims.(jwt.MapClaims)
-
-	Hash := c.Query("hash")
-	pdf := server.GetPdfByHash(claims["username"].(string), Hash)
-	temp := PDF{}
-	if pdf.ID == temp.ID {
-		pdf.Hash = Hash
-		pdf.Path = c.Query("path")
-		pdf.Page = 1
-		pdf.Username = claims["username"].(string)
-		err := server.InsertPdf(pdf.Username, pdf.Hash, pdf.Path, pdf.Page)
-		if err != nil {
-			fmt.Println(err.Error())
-			c.SendStatus(fiber.StatusBadRequest)
-		}
-	}
-	bind := fiber.Map{
-		"config":         true,
-		"Page":           pdf.Page,
-		"Hash":           pdf.Hash,
-		"Path":           pdf.Path,
-		"username":       claims["username"].(string),
-		"profilepicture": claims["profilepicture"].(string),
-	}
-	if err := c.Render("./views/pdf-viewer.pug", bind); err != nil {
-		c.Status(500).Send(err.Error())
-	}
-}
-
-// PdfUpdate updates the pdf information in the database.
-func (server *Server) PdfUpdate(c *fiber.Ctx) {
-	Page, err := strconv.Atoi(c.Query("page"))
-	if err != nil {
-		c.SendStatus(fiber.StatusBadRequest)
-	}
-	User := c.Query("user")
-	Hash := c.Query("hash")
-	Path := c.Query("path")
-	err = server.UpdatePdfPageCount(User, Hash, Path, Page)
-	if err != nil {
-		fmt.Println(err.Error())
-		c.SendStatus(fiber.StatusBadRequest)
-	}
-}
-
-// < ----- PDF EXTENSION ROUTE STOP ----- >
-
 // Generate JWT token
 func (server *Server) generateJWTToken(c *fiber.Ctx, username string, profilepicture string) {
 	// Create token
@@ -444,53 +379,6 @@ func (server *Server) GetFileSettingsByUsername(Username string) Files.FileSetti
 	}
 	return fileSettings
 }
-
-// < ----- PDF EXTENSION DB START ----- >
-
-// InsertPdf inserts a pdf into the database
-func (server *Server) InsertPdf(Username string, hash string, path string, page int) error {
-	statement, _ := server.DB.Prepare(`
-		INSERT INTO PDFS (Username, Hash, Path, Page) values (?,?,?,?)
-	`)
-	_, err := statement.Exec(Username, hash, path, page)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// UpdatePdfPageCount updates the current page count of a given pdf.
-func (server *Server) UpdatePdfPageCount(Username string, hash string, path string, page int) error {
-	statement, _ := server.DB.Prepare(`
-		UPDATE PDFS SET Page=$1 WHERE Hash=$2 AND Username=$3
-	`)
-	result, err := statement.Exec(page, hash, Username)
-	if err != nil {
-		return err
-	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected == 0 {
-		err := server.InsertPdf(Username, hash, path, page)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// GetPdfByHash gets the pdf from it's hash and returns it as a PDF object.
-func (server *Server) GetPdfByHash(Username string, hash string) PDF {
-	result := server.DB.QueryRow("SELECT * FROM PDFS WHERE Username=$1 AND Hash=$2", Username, hash)
-	pdf := PDF{}
-	result.Scan(&pdf.ID, &pdf.Username, &pdf.Hash, &pdf.Path, &pdf.Page)
-	return pdf
-}
-
-// < ----- PDF EXTENSION DB STOP ----- >
 
 // < ----- Helpers ----- >
 func deleteEmpty(s []string) []string {

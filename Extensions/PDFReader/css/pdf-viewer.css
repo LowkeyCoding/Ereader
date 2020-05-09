@@ -1,0 +1,71 @@
+* {
+  margin: 0;
+  padding: 0;
+  font-family: "Sen", sans-serif;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
+}
+*::-webkit-scrollbar-track {
+  background: #68C1EB;
+  border-radius: 20px;
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
+}
+*::-webkit-scrollbar-thumb {
+  background: #4386B1;
+  border-radius: 20px;
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
+}
+
+body {
+  background-color: #56baed;
+}
+
+.container {
+  width: 100%;
+  text-align: center;
+  -webkit-box-shadow: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 60px 0 rgba(0, 0, 0, 0.4);
+  display: inline-block;
+}
+
+#pdf-render {
+  margin: 0 auto;
+  -webkit-box-shadow: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 60px 0 rgba(0, 0, 0, 0.4);
+  margin-bottom: 66px;
+}
+
+.rounded {
+  border-radius: 8px;
+}
+
+.shadow {
+  box-shadow: 0 0 16px 0px rgba(0, 0, 0, 0.32);
+}
+
+#useroverlay {
+  position: -webkit-sticky;
+  /* Safari */
+  position: sticky;
+  left: 8px;
+  top: 8px;
+  padding: 8px 16px;
+  background-color: white;
+  width: fit-content;
+}
+#useroverlay p {
+  display: flex;
+  align-items: center;
+}
+#useroverlay a {
+  margin: 0px 8px;
+  color: #1fbec4;
+}
+
+img.circular {
+  border-radius: 50%;
+}
+
+/*# sourceMappingURL=pdf-viewer.css.map */

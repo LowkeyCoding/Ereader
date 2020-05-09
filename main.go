@@ -69,13 +69,16 @@ func main() {
 
 	app.Get("/home", server.Home)
 	app.Get("/settings", server.Settings)
-	app.Get("/pdf-viewer", server.PdfViewer)
 
 	// < ----- POST ROUTES ----- >
 
 	app.Post("/updateSetting", server.UpdateSetting)
 	app.Post("/query", server.Query)
-	app.Post("/pdf-update", server.PdfUpdate)
+
+	// < ----- EXTENSIONS ----- >
+
+	Extensions := ExtensionAPI.Extensions{}
+	Extensions.LoadExtensions(app, server.DB)
 
 	// < ----- TEST ----- >
 	test(server.DB, app)
@@ -95,7 +98,6 @@ func flags(server *Server.Server) {
 	server.Port = *port
 	server.Username = *username
 	server.Password = *password
-
 }
 
 // < ----- Random Generators ----- >
@@ -117,7 +119,7 @@ func stringWithCharset(length int, charset string) string {
 func test(DB *sql.DB, app *fiber.App) {
 	//databaseTest(DB)
 	//viewTest(DB, app)
-	configTest() // Fails since it's a hughe struggle
+	//configTest()
 }
 
 func databaseTest(DB *sql.DB) {
@@ -295,118 +297,13 @@ func configTest() {
 			}
 		}
 	}
-		
 	`
 	jsonMap := make(map[string]interface{})
 	err := json.Unmarshal([]byte(config), &jsonMap)
 	if err != nil {
 		panic(err)
 	}
-	Extension := InterfaceToExtension("", jsonMap)
-	fmt.Println(Extension)
-}
-
-// InterfaceToExtension converts an interface to the Extension structure.
-func InterfaceToExtension(space string, m map[string]interface{}) ExtensionAPI.Extension {
 	var Extension ExtensionAPI.Extension
-	for k, v := range m {
-		if k == "Name" {
-			Extension.Name = v.(string)
-		} else if k == "Views" {
-			var Views []ExtensionAPI.View
-			if mv, ok := v.(map[string]interface{}); ok {
-				for _, v := range mv {
-					Views = append(Views, InterfaceToView(v.(map[string]interface{})))
-				}
-			}
-			Extension.Views = Views
-		} else if k == "DatabaseTables" {
-			var DatabaseTables []ExtensionAPI.DatabaseTable
-			if mv, ok := v.(map[string]interface{}); ok {
-				for _, v := range mv {
-					DatabaseTables = append(DatabaseTables, InterfaceToTable(v.(map[string]interface{})))
-				}
-				Extension.DatabaseTables = DatabaseTables
-			}
-		}
-	}
-	return Extension
-}
-
-// InterfaceToView converts an interface to the View structure.
-func InterfaceToView(m map[string]interface{}) ExtensionAPI.View {
-	var View ExtensionAPI.View
-	for k, v := range m {
-		switch k {
-		case "Path":
-			View.Path = v.(string)
-		case "ViewPath":
-			View.ViewPath = v.(string)
-		case "NeedsQuerying":
-			View.NeedsQuerying = v.(bool)
-		case "QueryVariableNames":
-			var QueryVariableNames []string
-			for _, vv := range v.([]interface{}) {
-				QueryVariableNames = append(QueryVariableNames, vv.(string))
-			}
-			View.QueryVariableNames = QueryVariableNames
-		case "DatabaseQuery":
-			if mv, ok := v.(map[string]interface{}); ok {
-				View.DatabaseQuery = InterfaceToQuery(mv)
-			}
-		}
-	}
-	return View
-}
-
-// InterfaceToQuery converts an interface to the DatabaseQuery structure.
-func InterfaceToQuery(m map[string]interface{}) ExtensionAPI.DatabaseQuery {
-	var Query ExtensionAPI.DatabaseQuery
-	for k, v := range m {
-		switch k {
-		case "VariableType":
-			VariableType := make(map[string]ExtensionAPI.DatabaseItemType)
-			for kk, vv := range v.(map[string]interface{}) {
-				VariableType[kk] = ExtensionAPI.DatabaseItemType(vv.(string))
-			}
-			Query.VariableType = VariableType
-		case "Contains":
-			//Query.Contains = v.(map[string]interface{})
-			Contains := make(map[string]string)
-			for kk, vv := range v.(map[string]interface{}) {
-				Contains[kk] = vv.(string)
-			}
-			Query.Contains = Contains
-
-		case "Set":
-			Set := make(map[string]string)
-			for kk, vv := range v.(map[string]interface{}) {
-				Set[kk] = vv.(string)
-			}
-			Query.Set = Set
-		case "TableName":
-			Query.TableName = v.(string)
-		case "DatabaseOperation":
-			Query.DatabaseOperation = ExtensionAPI.DatabaseOperationType(v.(string))
-		}
-	}
-	return Query
-}
-
-// InterfaceToTable converts an interface to the DatabaseTable structure.
-func InterfaceToTable(m map[string]interface{}) ExtensionAPI.DatabaseTable {
-	var DatabaseTable ExtensionAPI.DatabaseTable
-	for k, v := range m {
-		switch k {
-		case "TableName":
-			DatabaseTable.TableName = v.(string)
-		case "Items":
-			Items := make(map[string]ExtensionAPI.DatabaseItemType)
-			for kk, vv := range v.(map[string]interface{}) {
-				Items[kk] = ExtensionAPI.DatabaseItemType(vv.(string))
-			}
-			DatabaseTable.Items = Items
-		}
-	}
-	return DatabaseTable
+	Extension = Extension.InterfaceToExtension("", jsonMap)
+	fmt.Println(Extension)
 }

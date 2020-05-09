@@ -108,16 +108,3 @@ const updatePdfProgress = ()=> {
       }
     post("/query", body)
 }
-
-function post(path, params) {
-  let formData = new FormData();
-  for (const key in params) {
-    if (params.hasOwnProperty(key)) {
-      formData.append(key, params[key]);
-    }
-  }
-  fetch(path, {
-    method: 'POST',
-    body: formData 
-  }).catch(err => console.log(err));
-}

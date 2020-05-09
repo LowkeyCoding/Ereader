@@ -130,7 +130,6 @@ func (server *Server) Query(c *fiber.Ctx) {
 
 	databaseQuery.DatabaseOperation = ExtensionAPI.DatabaseOperationType(c.FormValue("DatabaseOperation"))
 
-	fmt.Println(databaseQuery)
 	_, err := databaseQuery.GenerateQuery(server.DB)
 	if err != nil {
 		fmt.Println(err.Error())

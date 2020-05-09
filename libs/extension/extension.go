@@ -18,6 +18,11 @@ type Extension struct {
 	DatabaseTables []DatabaseTable `json:"DatabaseTable"`
 }
 
+// LoadExtension loads a given extension.
+func (extension *Extension) LoadExtension() error {
+	return nil
+}
+
 // View descripes the structure of an view.
 type View struct {
 	Path               string        `json:"Path"`               // The path the view will be rendered to.
@@ -41,7 +46,6 @@ func (view *View) GenerateView(app *fiber.App, DB *sql.DB) {
 		if view.NeedsQuerying {
 			for _, variable := range view.QueryVariableNames {
 				view.DatabaseQuery.Contains[variable] = c.Query(variable)
-				fmt.Println(variable + ": " + view.DatabaseQuery.Contains[variable])
 			}
 			_, err := view.DatabaseQuery.GenerateQuery(DB)
 			if err != nil {
@@ -176,7 +180,6 @@ func (query *DatabaseQuery) GenerateQuery(DB *sql.DB) (string, error) {
 	case DELETE:
 		Query = query.Delete()
 	}
-	fmt.Println("Query: ", Query)
 	rows, err := DB.Query(Query)
 	if err != nil {
 		return "", err
@@ -323,6 +326,5 @@ func (query *DatabaseQuery) LoadResultIntoMap(rows *sql.Rows) error {
 		// Append to the final results slice
 		query.Result = append(query.Result, row)
 	}
-	fmt.Println(query.Result) // You can then json.Marshal or w/e
 	return nil
 }

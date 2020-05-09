@@ -246,7 +246,7 @@ func viewTest(DB *sql.DB, app *fiber.App) {
 	for _, view := range extension.Views {
 		view.GenerateView(app, DB)
 	}
-	test, err := json.Marshal(&pdfReaderView)
+	test, err := json.Marshal(&extension)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -256,57 +256,45 @@ func viewTest(DB *sql.DB, app *fiber.App) {
 func configTest() {
 	config := `
 	{
-		"Name":"PDFReader",
-		"Views":{
-				"updatePageCount": {
-					"Path":"/updatePageCount",
-					"ViewPath":"",
-					"NeedsQuerying":false,
-					"QueryVariableNames":  ["Hash", "Username"],
-					"DatabaseQuery": {
-							"Result":{
-								
-							},
-							"Contains":{
-								"Hash":"Hash",
-								"Username":"Username"
-							},
-							"Set":{
-								"Page":"PageNumber"
-							},
-							"TableName":"PDFS",
-							"DatabaseOperation":"UPDATE"
-					}
-				},
-				"getPDF":{
-					"Path":"/GetPdfByHash",
-					"ViewPath":"",
-					"NeedsQuerying":true,
-					"QueryVariableNames": ["Hash", "Username"],
-					"DatabaseQuery": {
-						"Result":{
-							
-						},
-						"Contains":
-							"Hash":"Hash",
-							"Username":"Username"
-						},
-						"Set":{},
-						"TableName":"PDFS",
-						"DatabaseOperation":"SELECT"
-					}
-				}
-		},
-		"DatabaseTables":{
-			"PDFS":{
-				"ID":"INTERGER",
-				"Username":"TEXT",
-				"Hash":"TEXT",
-				"Path":"TEXT",
-				"Page":"INTEGER"
+		"Name": "PDFREADER",
+		"Views": [
+		  {
+			"Path": "/pdf",
+			"ViewPath": "./views/pdf.pug",
+			"needsQuerying": true,
+			"QueryVariableNames": [
+			  "Hash",
+			  "Username"
+			],
+			"DatabaseQuery": {
+			  "Result": null,
+			  "VariableType": {
+				"Hash": "TEXT",
+				"Username": "TEXT"
+			  },
+			  "Contains": {
+				"Hash": "",
+				"Username": ""
+			  },
+			  "Set": null,
+			  "TableName": "PDFS",
+			  "DatabaseOperation": "SELECT"
 			}
-		}
-	 }
+		  }
+		],
+		"DatabaseTable": [
+		  {
+			"TableName": "PDFS",
+			"Items": {
+			  "Hash": "TEXT",
+			  "ID": "INTEGER",
+			  "Page": "INTEGER",
+			  "Path": "TEXT",
+			  "Username": "TEXT"
+			}
+		  }
+		]
+	  }
 	`
 	jsonMap := make(map[string]interface{})
 	err := json.Unmarshal([]byte(config), &jsonMap)

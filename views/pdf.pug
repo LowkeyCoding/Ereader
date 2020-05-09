@@ -31,16 +31,54 @@ body
                 a#totalPages
         canvas#pdf-render
         script
-            let PDF = {
-                url:                "/volume/#{Path}",
-                path:               "#{Path}",
-                user:               "#{username}",
-                doc:                null,
-                hash:               "#{Hash}",
-                scale:              2,
-                pageNum:            #{Page},
-                pageIsRendering:    false,
-                pageNumIsPending:   null
+            function post(path, params) {
+                let formData = new FormData();
+                for (const key in params) {
+                    if (params.hasOwnProperty(key)) {
+                    formData.append(key, params[key]);
+                    }
+                }
+                fetch(path, {
+                    method: 'POST',
+                    body: formData 
+                }).catch(err => console.log(err));
             }
+        if Path
+            script
+                let PDF = {
+                    url:                "/volume/#{Path}",
+                    path:               "#{Path}",
+                    user:               "#{username}",
+                    doc:                null,
+                    hash:               "#{Hash}",
+                    scale:              2,
+                    pageNum:            #{Page},
+                    pageIsRendering:    false,
+                    pageNumIsPending:   null
+                }
+        else 
+            script
+                const urlParams = new URLSearchParams(window.location.search);
+                let PDF = {
+                    url:                "/volume/"+urlParams.get("Path"),
+                    path:               urlParams.get("Path"),
+                    user:               "#{username}",
+                    doc:                null,
+                    hash:               urlParams.get("Hash"),
+                    scale:              2,
+                    pageNum:            1,
+                    pageIsRendering:    false,
+                    pageNumIsPending:   null
+                }
+                let params = {
+                    "Result": null,
+                    "VariableType": '{"Hash": "TEXT","Username": "TEXT","Page":"INTEGER","Path": "TEXT"}',
+                    "Contains": '{"Hash": "'+PDF.hash+'","Username": "'+PDF.user+'","Page":"'+PDF.pageNum+'","Path":"'+PDF.path+'"}',
+                    "Set": null,
+                    "TableName": "PDFS",
+                    "DatabaseOperation": "INSERT"
+                }
+                post("/query", params)
+
     script[src="https://mozilla.github.io/pdf.js/build/pdf.js"]
     script[src="js/main2.js"]

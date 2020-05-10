@@ -24,15 +24,22 @@ type File struct {
 	Extension   string      `json:"Extension"`
 	FileSetting FileSetting `json:"FileSetting"`
 	Hash        string      `json:"Hash"`
+	User        string      `json:"User"`
 }
 
 // Files is a array of containing multiple instances of file.
 type Files []File
 
-// AddFileSetting adds a file setting to the file
+// AddFileSetting adds a file setting
 func (files Files) AddFileSetting(settingsMap map[string]FileSetting, IconsList map[string]bool) Files {
 	for i := range files {
 		files[i].FileSetting = settingsMap[files[i].Extension]
+		fmt.Println("ID: ", files[i].FileSetting.ID)
+		fmt.Println("Icon: ", files[i].FileSetting.Icon)
+		fmt.Println("Extension: ", files[i].FileSetting.Extension)
+		fmt.Println("ApplicationLink: ", files[i].FileSetting.ApplicationLink)
+		fmt.Println("Username: ", files[i].FileSetting.Username)
+		fmt.Println("-----------------------------------")
 		if files[i].Extension != "" {
 			if IconsList[files[i].Extension[1:]] {
 				files[i].FileSetting.Icon = files[i].Extension[1:]
@@ -40,6 +47,12 @@ func (files Files) AddFileSetting(settingsMap map[string]FileSetting, IconsList 
 				files[i].FileSetting.Icon = "txt"
 			}
 		}
+		fmt.Println("ID: ", files[i].FileSetting.ID)
+		fmt.Println("Icon: ", files[i].FileSetting.Icon)
+		fmt.Println("Extension: ", files[i].FileSetting.Extension)
+		fmt.Println("ApplicationLink: ", files[i].FileSetting.ApplicationLink)
+		fmt.Println("Username: ", files[i].FileSetting.Username)
+		fmt.Println("-----------------------------------")
 	}
 	return files
 }

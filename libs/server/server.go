@@ -118,11 +118,11 @@ func (server *Server) Query(c *fiber.Ctx) {
 
 	databaseQuery.DatabaseOperation = ExtensionAPI.DatabaseOperationType(c.FormValue("DatabaseOperation"))
 
-	_, err := databaseQuery.GenerateQuery(server.DB)
+	result, err := databaseQuery.GenerateQuery(server.DB)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	c.SendStatus(fiber.StatusOK)
+	c.SendString(result)
 }
 
 // < ----- GET ROUTES ----- >
@@ -180,7 +180,6 @@ func (server *Server) Home(c *fiber.Ctx) {
 
 	settingsMap := tUser.FileSettings.ToMap()
 	files = files.AddFileSetting(settingsMap, server.IconsList)
-
 	bind := fiber.Map{
 		"user":       tUser,
 		"files":      files,
@@ -273,8 +272,8 @@ func (server *Server) InitDB() {
 			ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 			Username TEXT,
 			Extension TEXT,
-			Icon TEXT,
-			ApplicationLink TEXT
+			ApplicationLink TEXT,
+			Icon TEXT
 		);
 	`)
 	if err != nil {
@@ -358,7 +357,7 @@ func (server *Server) UpdateFileSetting(Username string, Extension string, Appli
 func (server *Server) GetFileSettingByUsernameAndExtension(Username string, Extension string) Files.FileSetting {
 	result := server.DB.QueryRow("SELECT * FROM FileSettings WHERE Username=$1 AND Extension=$2", Username, Extension)
 	setting := Files.FileSetting{}
-	result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.Icon, &setting.ApplicationLink)
+	result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.ApplicationLink, &setting.Icon)
 	return setting
 }
 
@@ -371,7 +370,7 @@ func (server *Server) GetFileSettingsByUsername(Username string) Files.FileSetti
 	fileSettings := Files.FileSettings{}
 	for result.Next() {
 		setting := Files.FileSetting{}
-		err := result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.Icon, &setting.ApplicationLink)
+		err := result.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.ApplicationLink, &setting.Icon)
 		if err != nil {
 			fmt.Println(err.Error())
 		}

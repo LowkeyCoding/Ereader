@@ -45,7 +45,7 @@ body
                             span.details #{$file.FileCount} Items
                     else 
                         if $file.FileSetting.ApplicationLink
-                            a.file[href=$file.FileSetting.ApplicationLink + "?Path="+ $file.Path + "&Hash=" + $file.Hash + "&User=" + $file.FileSetting.Username]
+                            a.file[href=$file.FileSetting.ApplicationLink + "?Path="+ $file.Path + "&Hash=" + $file.Hash + "&Username=" + $file.FileSetting.Username]
                                 i[class="icon fiv-viv fiv-icon-"+$file.FileSetting.Icon]
                                 span.name #{$file.Name}
                                 span.details #{$file.SizeSI}

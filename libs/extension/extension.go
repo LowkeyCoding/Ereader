@@ -337,6 +337,7 @@ func (query *DatabaseQuery) GenerateQuery(DB *sql.DB) (string, error) {
 	case DELETE:
 		Query = query.Delete()
 	}
+	fmt.Println("Query: ", Query)
 	rows, err := DB.Query(Query)
 	if err != nil {
 		return "", err
@@ -373,9 +374,9 @@ func (query *DatabaseQuery) Insert() string {
 	Query := query.DatabaseOperation.String() + " INTO " + query.TableName + " ("
 	keyMap := make(map[int]string)
 	i := 0
-	for key := range query.Contains {
+	for key := range query.Set {
 		keyMap[i] = key
-		if i < len(query.Contains)-1 {
+		if i < len(query.Set)-1 {
 			Query += key + ","
 		} else {
 			Query += key + ")"
@@ -385,9 +386,9 @@ func (query *DatabaseQuery) Insert() string {
 	Query += " VALUES ("
 	for j := 0; j < i; j++ {
 		if j < i-1 {
-			Query += query.Contains[keyMap[j]] + ","
+			Query += query.Set[keyMap[j]] + ","
 		} else {
-			Query += query.Contains[keyMap[j]] + ")"
+			Query += query.Set[keyMap[j]] + ")"
 		}
 	}
 	return Query

@@ -73,8 +73,8 @@ body
                 let params = {
                     "Result": null,
                     "VariableType": '{"Hash": "TEXT","Username": "TEXT","Page":"INTEGER","Path": "TEXT"}',
-                    "Contains": '{"Hash": "'+PDF.hash+'","Username": "'+PDF.user+'","Page":"'+PDF.pageNum+'","Path":"'+PDF.path+'"}',
-                    "Set": null,
+                    "Contains": '{}',
+                    "Set": '{"Hash": "'+PDF.hash+'","Username": "'+PDF.user+'","Page":"'+PDF.pageNum+'","Path":"'+PDF.path+'"}',
                     "TableName": "PDFS",
                     "DatabaseOperation": "INSERT"
                 }

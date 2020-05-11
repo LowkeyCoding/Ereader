@@ -1,13 +1,13 @@
 function post(path, params, callback) {
     let formData = new FormData();
     for (const key in params) {
-      if (params.hasOwnProperty(key)) {
-        formData.append(key, params[key]);
-      }
+        if (params.hasOwnProperty(key)) {
+            formData.append(key, params[key]);
+        }
     }
     fetch(path, {
-      method: 'POST',
-      body: formData 
+        method: 'POST',
+        body: formData
     }).then(response => {
         callback(response);
     }).catch(err => console.log(err));
@@ -19,7 +19,7 @@ button.onclick = () => {
     let params = {
         "Result": null,
         "VariableType": '{"Extension": "TEXT","Username": "TEXT"}',
-        "Contains": '{"Extension": "'+Extension.value+'","Username": "'+username+'"}',
+        "Contains": '{"Extension": "' + Extension.value + '","Username": "' + username + '"}',
         "Set": null,
         "TableName": "FileSettings",
         "DatabaseOperation": "SELECT"
@@ -34,24 +34,24 @@ button.onclick = () => {
             }
             if (response.ID != null) {
                 let params = {
-                "Result": null,
-                "VariableType": '{"Extension": "TEXT", "ApplicationLink": "TEXT", "Username": "TEXT"}',
-                "Contains": '{"Extension": "'+Extension.value+'", "Username": "'+username+'"}',
-                "Set": '{"ApplicationLink": "'+ApplicationLink.value+'"}',
-                "TableName": "FileSettings",
-                "DatabaseOperation": "UPDATE"
+                    "Result": null,
+                    "VariableType": '{"Extension": "TEXT", "ApplicationLink": "TEXT", "Username": "TEXT"}',
+                    "Contains": '{"Extension": "' + Extension.value + '", "Username": "' + username + '"}',
+                    "Set": '{"ApplicationLink": "' + ApplicationLink.value + '"}',
+                    "TableName": "FileSettings",
+                    "DatabaseOperation": "UPDATE"
                 }
-                post("/query", params, (response) => {alert(response.statusText)})
+                post("/query", params, (response) => { alert(response.statusText) })
             } else {
                 let params = {
                     "Result": null,
                     "VariableType": '{"Extension": "TEXT", "ApplicationLink": "TEXT", "Icon": "TEXT", "Username": "TEXT"}',
-                    "Contains": '{"Extension": "'+Extension.value+'", "ApplicationLink": "'+ApplicationLink.value+'", "Icon": "'+Extension.value.substr(1)+'", "Username": "'+username+'"}',
-                    "Set": null,
+                    "Contains": '{}',
+                    "Set": '{"Extension": "' + Extension.value + '", "ApplicationLink": "' + ApplicationLink.value + '", "Icon": "' + Extension.value.substr(1) + '", "Username": "' + username + '"}',
                     "TableName": "FileSettings",
                     "DatabaseOperation": "INSERT"
                 }
-                post("/query", params, (response) => {alert(response.statusText)})
+                post("/query", params, (response) => { alert(response.statusText) })
             }
         })
     })

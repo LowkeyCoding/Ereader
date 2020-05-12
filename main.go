@@ -69,6 +69,7 @@ func main() {
 
 	app.Get("/home", server.Home)
 	app.Get("/settings", server.Settings)
+	app.Get("/files", server.GetFiles)
 
 	// < ----- POST ROUTES ----- >
 

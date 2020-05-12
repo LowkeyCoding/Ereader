@@ -125,6 +125,36 @@ func (server *Server) Query(c *fiber.Ctx) {
 	c.SendString(result)
 }
 
+// GetFiles is used to retrieve all files from a given path.
+func (server *Server) GetFiles(c *fiber.Ctx) {
+	// Get current user information from the claims map.
+	user := c.Locals("user").(*jwt.Token)
+	claims := user.Claims.(jwt.MapClaims)
+
+	qPath := server.Volume.Path
+	if len(c.Query("path")) == 0 {
+		qPath += "/"
+	} else {
+		qPath += c.Query("path")
+	}
+	Files, err := server.Volume.WalkFolder(qPath)
+	tUser := server.GetUserByUsername(claims["username"].(string))
+
+	settingsMap := tUser.FileSettings.ToMap()
+	Files = Files.AddFileSetting(settingsMap, server.IconsList)
+
+	if err != nil {
+		fmt.Println(err.Error())
+		c.SendStatus(fiber.StatusInternalServerError)
+	}
+	json, err := json.Marshal(Files)
+	if err != nil {
+		fmt.Println(err.Error())
+		c.SendStatus(fiber.StatusInternalServerError)
+	}
+	c.SendString(string(json))
+}
+
 // < ----- GET ROUTES ----- >
 
 // Login is the frontend used to both signin and signup.

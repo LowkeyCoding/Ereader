@@ -31,7 +31,10 @@ func main() {
 	// setup the volume for the server.
 	server.Volume = files.Volume{Name: "C:", Path: "./files"}
 	// Setup fiber
-	app := fiber.New()
+	settings := fiber.Settings{
+		ETag: server.Etag,
+	}
+	app := fiber.New(&settings)
 	app.Settings.TemplateEngine = template.Amber()
 	// setup logger middleware
 	app.Use(logger.New())
@@ -75,7 +78,6 @@ func main() {
 
 	app.Post("/updateSetting", server.UpdateSetting)
 	app.Post("/query", server.Query)
-
 	// < ----- EXTENSIONS ----- >
 
 	Extensions := ExtensionAPI.Extensions{}
@@ -94,9 +96,11 @@ func flags(server *Server.Server) {
 	port := flag.Int("port", 8080, "The port is the port used to server the server")
 	username := flag.String("username", "admin", "The Username is for the database to ensure the data is protected")
 	password := flag.String("password", "admin", "The Password is for the database to ensure the data is protected")
+	etag := flag.Bool("etag", false, "Enables or disables ETAG generation")
 	flag.Parse()
 	server.Secret = *secret
 	server.Port = *port
+	server.Etag = *etag
 	server.Username = *username
 	server.Password = *password
 }

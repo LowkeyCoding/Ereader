@@ -337,7 +337,6 @@ func (query *DatabaseQuery) GenerateQuery(DB *sql.DB) (string, error) {
 	case DELETE:
 		Query = query.Delete()
 	}
-	fmt.Println("Query: ", Query)
 	rows, err := DB.Query(Query)
 	if err != nil {
 		return "", err

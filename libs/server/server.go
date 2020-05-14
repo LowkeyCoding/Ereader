@@ -35,6 +35,7 @@ type Server struct {
 	Password  string
 	Secret    string
 	Port      int
+	Etag      bool
 	Volume    Files.Volume
 	IconsList map[string]bool
 }

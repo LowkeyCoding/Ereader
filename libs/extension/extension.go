@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	Files "../files"
+	User "../user"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber"
 )
@@ -35,6 +37,8 @@ func (extension *Extension) LoadExtension() {
 	extension.Name = Extension.Name
 	extension.Views = Extension.Views
 	extension.DatabaseTables = Extension.DatabaseTables
+
+	fmt.Println("Extension: ", extension.Name, "has been successfully loaded.")
 }
 
 // GenerateStaticPaths generates paths for the css and js files to be served.
@@ -47,10 +51,17 @@ func (extension Extension) GenerateStaticPaths(app *fiber.App) {
 func (extension *Extension) Setup(app *fiber.App, DB *sql.DB) error {
 	extension.GenerateStaticPaths(app)
 	for _, databaseTable := range extension.DatabaseTables {
-		databaseTable.GenerateTable(DB)
+		if databaseTable.TableName != "" {
+			err := databaseTable.GenerateTable(DB)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	for _, view := range extension.Views {
-		view.GenerateView(app, DB)
+		if view.Path != "" {
+			view.GenerateView(app, DB)
+		}
 	}
 	return nil
 }
@@ -161,7 +172,10 @@ func (extension *Extension) InterfaceToTable(m map[string]interface{}) DatabaseT
 }
 
 // Extensions is a array of containing multiple instances of Extension.
-type Extensions []Extension
+type Extensions struct {
+	Extensions []Extension
+	DB         *sql.DB
+}
 
 // LoadExtensions loads all extensions from the extensions folder.
 func (extensions *Extensions) LoadExtensions(app *fiber.App, DB *sql.DB) {
@@ -169,13 +183,15 @@ func (extensions *Extensions) LoadExtensions(app *fiber.App, DB *sql.DB) {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
 	for _, file := range files {
 		if file.IsDir() {
 			Extension := Extension{Path: "./Extensions/" + file.Name()}
 			Extension.LoadExtension()
-			Extension.Setup(app, DB)
-			*extensions = append(*extensions, Extension)
+			err := Extension.Setup(app, DB)
+			if err != nil {
+				fmt.Println("Error loading extension", Extension.Name+":", err.Error())
+			}
+			extensions.Extensions = append(extensions.Extensions, Extension)
 		}
 	}
 }
@@ -196,9 +212,28 @@ func (view *View) GenerateView(app *fiber.App, DB *sql.DB) {
 		bind := fiber.Map{}
 		user := c.Locals("user").(*jwt.Token)
 		claims := user.Claims.(jwt.MapClaims)
+		// get user
+		result := DB.QueryRow("select * from Users where Username=$1", claims["username"].(string))
+		tUser := User.User{}
+		result.Scan(&tUser.ID, &tUser.Username, &tUser.Password, &tUser.ProfilePicture)
+		// get files settings
+		result2, err := DB.Query("SELECT * FROM FileSettings WHERE Username=$1", tUser.Username)
+		if err != nil {
+			panic(err)
+		}
+		fileSettings := Files.FileSettings{}
+		for result2.Next() {
+			setting := Files.FileSetting{}
+			err := result2.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.ApplicationLink, &setting.Icon)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fileSettings = append(fileSettings, setting)
+		}
+		tUser.FileSettings = fileSettings
+
 		bind = fiber.Map{
-			"username":       claims["username"].(string),
-			"profilepicture": claims["profilepicture"].(string),
+			"user": tUser,
 		}
 		if view.NeedsQuerying {
 			for _, variable := range view.QueryVariableNames {
@@ -295,14 +330,8 @@ func (database *DatabaseTable) GenerateTable(DB *sql.DB) error {
 	// Setup the FileSettings table if it doesn't exist'
 	Query := "CREATE TABLE IF NOT EXISTS " + database.TableName + "("
 	Query += "ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT"
-	i := 0
 	for key, sqlType := range database.Items {
-		if i < len(database.Items) {
-			Query += ", " + key + " " + sqlType.String()
-		} else {
-			Query += ", " + key + " " + sqlType.String()
-		}
-		i++
+		Query += ", " + key + " " + sqlType.String()
 	}
 	Query += ");"
 	statement, err := DB.Prepare(Query)

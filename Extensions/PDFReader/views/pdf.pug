@@ -8,16 +8,16 @@ head
 body
     div#container.container
         div#useroverlay.shadow.rounded
-            if username
-                if profilepicture
+            if user.Username
+                if user.ProfilePicture
                     p
                         | Welcome 
-                        a#name[name="username"]#{username}
-                        img.circular[src=profilepicture][name="icon"][height=32][width=32][placeholder="icon"]
+                        a#name[name="username"]#{user.Username}
+                        img.circular[src=user.ProfilePicture][name="icon"][height=32][width=32][placeholder="icon"]
                 else
                     p
                         | Welcome 
-                        a#name[name="username"]#{username}
+                        a#name[name="username"]#{user.Username}
                         img.circular[src="https://via.placeholder.com/128/5db3ad/ffffff/?text=?"][name="icon"][height=32][width=32][placeholder="icon"]
             else
                 p
@@ -62,7 +62,7 @@ body
                 let PDF = {
                     url:                "/volume/"+urlParams.get("Path"),
                     path:               urlParams.get("Path"),
-                    user:               "#{username}",
+                    user:               "#{user.Username}",
                     doc:                null,
                     hash:               urlParams.get("Hash"),
                     scale:              2,

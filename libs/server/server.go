@@ -10,21 +10,11 @@ import (
 
 	ExtensionAPI "../extension"
 	Files "../files"
+	User "../user"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// < ----- User ----- >
-
-// User is a struct representing a user in the database
-type User struct {
-	ID             string             `json:"ID"`
-	Username       string             `json:"Username"`
-	Password       string             `json:"Password"`
-	ProfilePicture string             `json:"ProfilePicture"`
-	FileSettings   Files.FileSettings `json:"FileSettings"`
-}
 
 // < ----- Server ----- >
 
@@ -44,7 +34,7 @@ type Server struct {
 
 // Signup is the path used for createing a user. the username need to be  unique.
 func (server *Server) Signup(c *fiber.Ctx) {
-	user := &User{Username: c.FormValue("username"), Password: c.FormValue("password"), ProfilePicture: c.FormValue("profilepicture")}
+	user := &User.User{Username: c.FormValue("username"), Password: c.FormValue("password"), ProfilePicture: c.FormValue("profilepicture")}
 	if len(user.Username) < 3 || len(user.Password) < 6 {
 		c.SendStatus(fiber.StatusBadRequest)
 		return
@@ -66,7 +56,7 @@ func (server *Server) Signup(c *fiber.Ctx) {
 
 // Signin is used to assign the user their token given they provided the correct credentials.
 func (server *Server) Signin(c *fiber.Ctx) {
-	user := &User{Username: c.FormValue("username"), Password: c.FormValue("password")}
+	user := &User.User{Username: c.FormValue("username"), Password: c.FormValue("password")}
 	storedUser := server.GetUserByUsername(user.Username)
 	if storedUser.ID == sql.ErrNoRows.Error() {
 		c.SendStatus(http.StatusUnauthorized)
@@ -341,9 +331,9 @@ func (server *Server) InsertUser(username string, password string, profilepictur
 }
 
 // GetUserByUsername gets the user by their username and returns the user as a User object.
-func (server *Server) GetUserByUsername(username string) User {
+func (server *Server) GetUserByUsername(username string) User.User {
 	result := server.DB.QueryRow("select * from Users where Username=$1", username)
-	user := User{}
+	user := User.User{}
 	result.Scan(&user.ID, &user.Username, &user.Password, &user.ProfilePicture)
 	user.FileSettings = server.GetFileSettingsByUsername(username)
 	return user

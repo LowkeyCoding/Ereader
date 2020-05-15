@@ -80,7 +80,7 @@ func main() {
 	app.Post("/query", server.Query)
 	// < ----- EXTENSIONS ----- >
 
-	Extensions := ExtensionAPI.Extensions{}
+	Extensions := ExtensionAPI.Extensions{DB: server.DB}
 	Extensions.LoadExtensions(app, server.DB)
 
 	// < ----- TEST ----- >

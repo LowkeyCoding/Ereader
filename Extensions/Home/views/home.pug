@@ -1,0 +1,56 @@
+doctype html
+head
+  meta[charset="UTF-8"]
+  meta[name="viewport"][content="width=device-width"][initial-scale="1.0"]
+  link[rel="stylesheet"][href="./css/filebrowser.css"]
+  link[rel="stylesheet"][href="./css/icons.min.css"]
+  title Welcome #{user.Username}
+body
+    div#useroverlay.shadow.rounded
+        if user.Username
+            if user.ProfilePicture
+                p
+                    | Welcome 
+                    a#name[name="username"]#{user.Username}
+                    img.circular[src=user.ProfilePicture][name="icon"][height=32][width=32][placeholder="icon"]
+            else
+                p
+                    | Welcome 
+                    a#name[name="username"]#{user.Username}
+                    img.circular[src="https://via.placeholder.com/128/5db3ad/ffffff/?text=?"][name="icon"][height=32][width=32][placeholder="icon"]
+        else
+            p
+                | Welcome 
+                a#name[name="username"]User
+                img.circular[src="https://via.placeholder.com/128/5db3ad/ffffff/?text=?"][name="icon"][height=32][width=32][placeholder="icon"]
+    div.filebrowser
+        div.breadcrumbs
+            if volumepath
+                a[href="/home?path=/"]
+                    span#folderName#{volumepath}
+                span#arrow→
+            each $path in paths
+                a[href="/home?path=/"+$path]
+                    pan#folderName #{$path}
+                span#arrow→
+            pan#folderName #{endpath}
+                div#container
+        div.container
+            each $file in files
+                div.fileContainer
+                    if $file.IsDir
+                        a.file[href="/home?path="+$file.Path]
+                            i.icon.fiv-viv.fiv-icon-folder
+                            span.name #{$file.Name}
+                            span.details #{$file.FileCount} Items
+                    else 
+                        if $file.FileSetting.ApplicationLink
+                            a.file[href=$file.FileSetting.ApplicationLink + "?Path="+ $file.Path + "&Hash=" + $file.Hash + "&Username=" + $file.FileSetting.Username]
+                                i[class="icon fiv-viv fiv-icon-"+$file.FileSetting.Icon]
+                                span.name #{$file.Name}
+                                span.details #{$file.SizeSI}
+                        else
+                            a.file[href="/volume"+ $file.Path]
+                                i[class="icon fiv-viv fiv-icon-"+$file.FileSetting.Icon]
+                                span.name #{$file.Name}
+                                span.details #{$file.SizeSI}

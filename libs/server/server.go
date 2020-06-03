@@ -19,15 +19,14 @@ import (
 
 // Server class
 type Server struct {
-	DB        *sql.DB
-	Username  string
-	Password  string
-	Secret    string
-	HomePath  string
-	Port      int
-	Etag      bool
-	Volume    Files.Volume
-	IconsList map[string]bool
+	DB       *sql.DB
+	Username string
+	Password string
+	Secret   string
+	HomePath string
+	Port     int
+	Etag     bool
+	Volume   Files.Volume
 }
 
 // < ----- POST ROUTES ----- >
@@ -132,7 +131,7 @@ func (server *Server) GetFiles(c *fiber.Ctx) {
 	tUser := server.GetUserByUsername(claims["username"].(string))
 
 	settingsMap := tUser.FileSettings.ToMap()
-	Files = Files.AddFileSetting(settingsMap, server.IconsList)
+	Files = Files.AddFileSetting(settingsMap)
 
 	if err != nil {
 		fmt.Println(err.Error())

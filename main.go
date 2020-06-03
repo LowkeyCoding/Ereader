@@ -11,7 +11,6 @@ import (
 
 	ExtensionAPI "./libs/extension"
 	files "./libs/files"
-	Icons "./libs/icons"
 	Server "./libs/server"
 
 	"github.com/gofiber/fiber"
@@ -27,7 +26,6 @@ func main() {
 	flags(server)
 	// Setup the database
 	server.InitDB()
-	server.IconsList = Icons.GenerateIconsList()
 	// setup the volume for the server.
 	server.Volume = files.Volume{Name: "C:", Path: "./files"}
 	// Setup fiber

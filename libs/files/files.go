@@ -31,7 +31,7 @@ type File struct {
 type Files []File
 
 // AddFileSetting adds a file setting
-func (files Files) AddFileSetting(settingsMap map[string]FileSetting, IconsList map[string]bool) Files {
+func (files Files) AddFileSetting(settingsMap map[string]FileSetting) Files {
 	for i := range files {
 		files[i].FileSetting = settingsMap[files[i].Extension]
 		if files[i].Extension != "" {

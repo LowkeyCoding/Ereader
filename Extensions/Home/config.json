@@ -2,9 +2,10 @@
     "Name": "HOME",
     "Views":{
         "View": {
-            "Path": "/home2",
+            "Path": "/home",
             "ViewPath": "/views/home.pug",
             "NeedsQuerying": false,
+            "NeedsFiles": true,
             "QueryVariableNames": [],
             "DatabaseQuery": {
               "Result": null,

@@ -70,7 +70,6 @@ func main() {
 
 	// < ----- GET ROUTES ----- >
 
-	app.Get("/home", server.Home)
 	app.Get("/settings", server.Settings)
 	app.Get("/files", server.GetFiles)
 
@@ -81,10 +80,10 @@ func main() {
 	// < ----- EXTENSIONS ----- >
 
 	Extensions := ExtensionAPI.Extensions{DB: server.DB}
-	Extensions.LoadExtensions(app, server.DB)
+	Extensions.LoadExtensions(app, server.DB, server.Volume)
 
 	// < ----- TEST ----- >
-	test(server.DB, app)
+	test(server.DB, app, &server.Volume)
 	// start the server on the server.port
 	log.Fatal(app.Listen(server.Port))
 }
@@ -94,6 +93,7 @@ func main() {
 func flags(server *Server.Server) {
 	secret := flag.String("secret", stringWithCharset(256, charset), "The secrect is a key used for signing the users JWT token")
 	port := flag.Int("port", 8080, "The port is the port used to server the server")
+	homePath := flag.String("homePath", "/home", "HomePath is used to set the initial path to redirect to after logging in")
 	username := flag.String("username", "admin", "The Username is for the database to ensure the data is protected")
 	password := flag.String("password", "admin", "The Password is for the database to ensure the data is protected")
 	etag := flag.Bool("etag", false, "Enables or disables ETAG generation")
@@ -101,6 +101,7 @@ func flags(server *Server.Server) {
 	server.Secret = *secret
 	server.Port = *port
 	server.Etag = *etag
+	server.HomePath = *homePath
 	server.Username = *username
 	server.Password = *password
 }
@@ -121,9 +122,9 @@ func stringWithCharset(length int, charset string) string {
 	return string(b)
 }
 
-func test(DB *sql.DB, app *fiber.App) {
+func test(DB *sql.DB, app *fiber.App, Volume *files.Volume) {
 	//databaseTest(DB)
-	//viewTest(DB, app)
+	//viewTest(DB, app, Volume)
 	//configTest()
 }
 
@@ -197,7 +198,7 @@ func databaseTest(DB *sql.DB) {
 	}
 }
 
-func viewTest(DB *sql.DB, app *fiber.App) {
+func viewTest(DB *sql.DB, app *fiber.App, Volume files.Volume) {
 	// Create the viewQueryVariableNames array
 	var viewQueryVariableNames []string
 	viewQueryVariableNames = append(viewQueryVariableNames, "Hash")
@@ -251,7 +252,7 @@ func viewTest(DB *sql.DB, app *fiber.App) {
 		databaseTable.GenerateTable(DB)
 	}
 	for _, view := range extension.Views {
-		view.GenerateView(app, DB)
+		view.GenerateView(app, DB, Volume)
 	}
 	test, err := json.Marshal(&extension)
 	if err != nil {

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	ExtensionAPI "../extension"
@@ -24,6 +23,7 @@ type Server struct {
 	Username  string
 	Password  string
 	Secret    string
+	HomePath  string
 	Port      int
 	Etag      bool
 	Volume    Files.Volume
@@ -68,7 +68,7 @@ func (server *Server) Signin(c *fiber.Ctx) {
 		return
 	}
 	server.generateJWTToken(c, user.Username, storedUser.ProfilePicture)
-	c.Redirect("/home?path=/")
+	c.Redirect(server.HomePath)
 }
 
 // UpdateSetting is used to either update or create a setting.
@@ -158,59 +158,6 @@ func (server *Server) Login(c *fiber.Ctx) {
 		if err := c.Render("./views/login.pug", fiber.Map{"signup": false}); err != nil {
 			c.Status(500).Send(err.Error())
 		}
-	}
-}
-
-// Home shows all the current files in the given directory.
-func (server *Server) Home(c *fiber.Ctx) {
-	// Get current user information from the claims map.
-	user := c.Locals("user").(*jwt.Token)
-	claims := user.Claims.(jwt.MapClaims)
-
-	// Setup the query path.
-	qPath := server.Volume.Path
-	if len(c.Query("path")) == 0 {
-		qPath += "/"
-	} else {
-		qPath += c.Query("path")
-	}
-	// Walk the given folder and return a list of files
-	files, err := server.Volume.WalkFolder(qPath)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	// Generate the path object used in the breadcrumbs.
-	paths := strings.Split(qPath, "./")
-	paths = strings.Split(paths[1], "/")
-	paths = deleteEmpty(paths)
-	if err != nil {
-		c.Status(500).Send(err.Error())
-	}
-	endpath := ""
-	Volumepath := ""
-	if len(paths) < 2 {
-		endpath = server.Volume.Name
-		paths = nil
-	} else {
-		Volumepath = server.Volume.Name
-		endpath = paths[len(paths)-1]
-		paths = paths[1 : len(paths)-1]
-	}
-	// Generate the bindings for the amber template
-	tUser := server.GetUserByUsername(claims["username"].(string))
-
-	settingsMap := tUser.FileSettings.ToMap()
-	files = files.AddFileSetting(settingsMap, server.IconsList)
-	bind := fiber.Map{
-		"user":       tUser,
-		"files":      files,
-		"volumepath": Volumepath,
-		"paths":      paths,
-		"endpath":    endpath,
-	}
-	// Render the amber template. It's .pug because i needed syntax higlighting
-	if err = c.Render("./views/home.pug", bind); err != nil {
-		c.Status(500).Send(err.Error())
 	}
 }
 

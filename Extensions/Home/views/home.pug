@@ -25,16 +25,50 @@ body
                 img.circular[src="https://via.placeholder.com/128/5db3ad/ffffff/?text=?"][name="icon"][height=32][width=32][placeholder="icon"]
     div.filebrowser
         div.breadcrumbs
-            if volumepath
-                a[href="/home?path=/"]
-                    span#folderName#{volumepath}
-                span#arrow→
-            each $path in paths
-                a[href="/home?path=/"+$path]
-                    pan#folderName #{$path}
-                span#arrow→
-            pan#folderName #{endpath}
-                div#container
+            script
+                const urlParams = new URLSearchParams(window.location.search);
+                paths = urlParams.get('path')
+                if (paths != null){
+                    paths = paths.split("./")
+                } else {
+                    paths = ["/"]
+                }
+                paths = paths[0].split("/").filter((el)=> { return el})
+                // create initial elements
+                breadcrumbs = document.getElementsByClassName("breadcrumbs")[0]
+                anker = document.createElement("a")
+                anker.href = "/home?path=/" 
+
+                spanName = document.createElement("span")
+                spanName.innerHTML = #{volume.Name}
+                anker.append(spanName)
+
+                spanArrow = document.createElement("span")
+                spanArrow.className = "arrow"
+                spanArrow.innerHTML = " → "
+
+                breadcrumbs.append(anker)
+                if (paths.length > 0){
+                    breadcrumbs.append(spanArrow)
+                    cpath = ""
+                    for(i=0; i<paths.length-1; i++){                   
+                        cpath += paths[i]
+                        anker = document.createElement("a")
+                        anker.href = "/home?path=/"+cpath 
+                        spanName = document.createElement("span")
+                        spanName.innerHTML = paths[i].split("/")
+                        anker.append(spanName)
+                        spanArrow = document.createElement("span")
+                        spanArrow.className = "arrow"
+                        spanArrow.innerHTML = " → "
+                        breadcrumbs.append(anker)
+                        breadcrumbs.append(spanArrow)
+                    }
+                //span#folderName #{endpath}
+                spanName = document.createElement("span")
+                spanName.innerHTML = paths[paths.length -1]
+                breadcrumbs.append(spanName)
+                }
         div.container
             each $file in files
                 div.fileContainer
@@ -54,3 +88,24 @@ body
                                 i[class="icon fiv-viv fiv-icon-"+$file.FileSetting.Icon]
                                 span.name #{$file.Name}
                                 span.details #{$file.SizeSI}
+    script
+        var getDefinedCss = (s) => {
+            if(!document.styleSheets) return '';
+            if(typeof s== 'string') s= RegExp('\\b'+s+'\\b','i'); // IE capitalizes html selectors 
+
+            var A, S, DS= document.styleSheets, n= DS.length, SA= [];
+            while(n){
+                S= DS[--n];
+                A= (S.rules)? S.rules: S.cssRules;
+                for(var i= 0, L= A.length; i<L; i++){
+                    tem= A[i].selectorText? [A[i].selectorText, A[i].style.cssText]: [A[i]+''];
+                    if(s.test(tem[0])) SA[SA.length]= tem;
+                }
+            }
+            return SA.join('\n\n');
+        }
+        document.querySelectorAll('.fiv-viv').forEach(item => {
+            if (getDefinedCss(item.className.split("icon fiv-viv ")[1]) == "") {
+                item.className='icon fiv-viv fiv-icon-txt'
+            }
+        })

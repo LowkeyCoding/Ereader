@@ -19,6 +19,7 @@ type Extension struct {
 	Name           string          `json:"Name"`
 	Path           string          `json:"Path"`
 	Views          []View          `json:"Views"`
+	Volume         Files.Volume    `json:"Volume"`
 	DatabaseTables []DatabaseTable `json:"DatabaseTable"`
 }
 
@@ -60,7 +61,7 @@ func (extension *Extension) Setup(app *fiber.App, DB *sql.DB) error {
 	}
 	for _, view := range extension.Views {
 		if view.Path != "" {
-			view.GenerateView(app, DB)
+			view.GenerateView(app, DB, extension.Volume)
 		}
 	}
 	return nil
@@ -104,6 +105,8 @@ func (extension *Extension) InterfaceToView(m map[string]interface{}) View {
 			View.ViewPath = extension.Path + v.(string)
 		case "NeedsQuerying":
 			View.NeedsQuerying = v.(bool)
+		case "NeedsFiles":
+			View.NeedsFiles = v.(bool)
 		case "QueryVariableNames":
 			var QueryVariableNames []string
 			for _, vv := range v.([]interface{}) {
@@ -178,14 +181,14 @@ type Extensions struct {
 }
 
 // LoadExtensions loads all extensions from the extensions folder.
-func (extensions *Extensions) LoadExtensions(app *fiber.App, DB *sql.DB) {
+func (extensions *Extensions) LoadExtensions(app *fiber.App, DB *sql.DB, Volume Files.Volume) {
 	files, err := ioutil.ReadDir("./Extensions")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	for _, file := range files {
 		if file.IsDir() {
-			Extension := Extension{Path: "./Extensions/" + file.Name()}
+			Extension := Extension{Path: "./Extensions/" + file.Name(), Volume: Volume}
 			Extension.LoadExtension()
 			err := Extension.Setup(app, DB)
 			if err != nil {
@@ -201,12 +204,13 @@ type View struct {
 	Path               string        `json:"Path"`               // The path the view will be rendered to.
 	ViewPath           string        `json:"ViewPath"`           // The view name. Will be used to select the correct view to render.
 	NeedsQuerying      bool          `json:"needsQuerying"`      // The flag to enable querying
+	NeedsFiles         bool          `json:"needsFiles"`         // The flag that enables the querying path before site loading.
 	QueryVariableNames []string      `json:"QueryVariableNames"` // Contains a a list of variable names used in the DatabaseQuery if it is set.
 	DatabaseQuery      DatabaseQuery `json:"DatabaseQueries"`    // The result will be passed to the tempalte generator.
 }
 
 // GenerateView generates a view based on the view structure.
-func (view *View) GenerateView(app *fiber.App, DB *sql.DB) {
+func (view *View) GenerateView(app *fiber.App, DB *sql.DB, Volume Files.Volume) {
 	app.Get(view.Path, func(c *fiber.Ctx) {
 		// Get current user information from the claims map.
 		bind := fiber.Map{}
@@ -222,6 +226,7 @@ func (view *View) GenerateView(app *fiber.App, DB *sql.DB) {
 			panic(err)
 		}
 		fileSettings := Files.FileSettings{}
+		// Load Result into fileSettings
 		for result2.Next() {
 			setting := Files.FileSetting{}
 			err := result2.Scan(&setting.ID, &setting.Username, &setting.Extension, &setting.ApplicationLink, &setting.Icon)
@@ -248,6 +253,22 @@ func (view *View) GenerateView(app *fiber.App, DB *sql.DB) {
 					bind[key] = value
 				}
 			}
+		}
+		if view.NeedsFiles {
+			qPath := Volume.Path
+			if len(c.Query("path")) == 0 {
+				qPath += "/"
+			} else {
+				qPath += c.Query("path")
+			}
+			files, err := Volume.WalkFolder(qPath)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			settingsMap := tUser.FileSettings.ToMap()
+			files = files.AddFileSetting(settingsMap, make(map[string]bool))
+			bind["files"] = files
+			bind["volume"] = Volume
 		}
 		if err := c.Render(view.ViewPath, bind); err != nil {
 			c.Status(500).Send(err.Error())

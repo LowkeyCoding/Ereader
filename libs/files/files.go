@@ -35,11 +35,7 @@ func (files Files) AddFileSetting(settingsMap map[string]FileSetting, IconsList 
 	for i := range files {
 		files[i].FileSetting = settingsMap[files[i].Extension]
 		if files[i].Extension != "" {
-			if IconsList[files[i].Extension[1:]] {
-				files[i].FileSetting.Icon = files[i].Extension[1:]
-			} else {
-				files[i].FileSetting.Icon = "txt"
-			}
+			files[i].FileSetting.Icon = files[i].Extension[1:]
 		}
 	}
 	return files

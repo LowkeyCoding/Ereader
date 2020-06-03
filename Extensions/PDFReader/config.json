@@ -5,6 +5,7 @@
             "Path": "/pdf",
             "ViewPath": "/views/pdf.pug",
             "NeedsQuerying": true,
+            "NeedsFiles": false,
             "QueryVariableNames": [
               "Hash",
               "Username"
